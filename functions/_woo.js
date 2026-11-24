@@ -154,11 +154,11 @@ function mapOrder(o, storeName, tz) {
 }
 
 async function ordersSince(env, sinceISO, storeName, tz, todayDate) {
-  // Query starting 1 hour before local midnight to catch all today's orders
-  // without pulling in hundreds of yesterday orders unnecessarily.
+  // Query starting 1 hour before local midnight to catch all today's orders,
+  // then strictly filter to today's local date so yesterday's orders never bleed in after 12am.
   const after = todayDate ? `${addDays(todayDate, -1)}T23:00:00` : sinceISO;
   const raw = await wooOrders(env, { after, fields: TODAY_FIELDS, maxPages: 25 });
-  return raw.map(o => mapOrder(o, storeName, tz));
+  return raw.map(o => mapOrder(o, storeName, tz)).filter(o => !todayDate || o.at.date === todayDate);
 }
 
 async function ordersForDay(env, targetDate, storeName, tz) {
@@ -323,7 +323,7 @@ export async function snapshot(env, targetDate = null, targetEndDate = null) {
 
   const metaRange = isRange
     ? { since: startDate, until: endDate }
-    : (isCustomDate ? { since: startDate, until: startDate } : null);
+    : (isCustomDate ? { since: startDate, until: startDate } : { since: l.date, until: l.date });
 
   const [{ orders: all }, hist, meta, stock] = await Promise.all([
     isRange
@@ -346,7 +346,7 @@ export async function snapshot(env, targetDate = null, targetEndDate = null) {
       };
     }
     for (const o of all) {
-      if (o.id) LATEST_TODAY_CACHE.ordersMap.set(o.id, o);
+      if (o.id && o.at.date === today) LATEST_TODAY_CACHE.ordersMap.set(o.id, o);
     }
   }
 
@@ -371,11 +371,13 @@ export async function snapshot(env, targetDate = null, targetEndDate = null) {
   let finalOrdersCount = orders.length;
 
   if (!isCustomDate && !isRange) {
-    // Monotonic ratchet: live sales and order counts never decrease!
-    finalRev = Math.max(finalRev, LATEST_TODAY_CACHE.revenue);
-    finalOrdersCount = Math.max(finalOrdersCount, LATEST_TODAY_CACHE.ordersCount);
-    LATEST_TODAY_CACHE.revenue = finalRev;
-    LATEST_TODAY_CACHE.ordersCount = finalOrdersCount;
+    // Monotonic ratchet: live sales and order counts never decrease within the same day!
+    if (LATEST_TODAY_CACHE.date === today) {
+      finalRev = Math.max(finalRev, LATEST_TODAY_CACHE.revenue);
+      finalOrdersCount = Math.max(finalOrdersCount, LATEST_TODAY_CACHE.ordersCount);
+      LATEST_TODAY_CACHE.revenue = finalRev;
+      LATEST_TODAY_CACHE.ordersCount = finalOrdersCount;
+    }
   }
   const rev = finalRev;
 

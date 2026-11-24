@@ -811,7 +811,7 @@
   <!-- Meta Ads -->
   <section id="meta-section">
     <div class="section-header">
-      <div class="section-title">🎯 Meta Ads Intelligence</div>
+      <div class="section-title">🎯 <span id="metaSectionTitle">Meta Ads Intelligence Today</span></div>
     </div>
     <div class="alert-card" id="ads"></div>
   </section>
@@ -849,6 +849,7 @@ let state = null;
 let activeStatusFilter = "";
 let maxSeenOpsRev = 0;
 let maxSeenOpsOrders = 0;
+let maxSeenOpsDate = "";
 
 function showLoading(title, sub) {
   const overlay = $("opsLoadingOverlay");
@@ -897,6 +898,12 @@ function render(s) {
   let totalRev = s.revenue || 0;
   let totalOrders = s.orders || 0;
   if (!isPast && !isRange) {
+    if (s.date && maxSeenOpsDate && maxSeenOpsDate !== s.date) {
+      // Midnight rollover! Reset ratchet so yesterday's numbers never bleed into today
+      maxSeenOpsRev = 0;
+      maxSeenOpsOrders = 0;
+    }
+    if (s.date) maxSeenOpsDate = s.date;
     if (totalRev < maxSeenOpsRev) totalRev = maxSeenOpsRev;
     else maxSeenOpsRev = totalRev;
     if (totalOrders < maxSeenOpsOrders) totalOrders = maxSeenOpsOrders;
@@ -937,6 +944,11 @@ function render(s) {
   }
   if ($("productsTitle")) {
     $("productsTitle").textContent = isRange ? `Top Products Sold (${s.selected_date})` : (isPast ? `Top Products Sold on ${s.selected_date}` : "Top Products Selling Today");
+  }
+  if ($("metaSectionTitle")) {
+    $("metaSectionTitle").textContent = isRange
+      ? `Meta Ads Intelligence (${s.selected_date})`
+      : (isPast ? `Meta Ads Intelligence on ${s.selected_date}` : "Meta Ads Intelligence Today");
   }
   if ($("liveTodayBtn")) {
     $("liveTodayBtn").style.display = (isPast || isRange) ? "inline-flex" : "none";

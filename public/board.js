@@ -16,7 +16,7 @@ const KEY = (() => {
 const withKey = path => API + path + (path.includes("?") ? "&" : "?") + "k=" + encodeURIComponent(KEY);
 const TV = window.TVBridge || null;   // provided by the Android TV app
 let state = null, shownRev = 0, insightIdx = 0;
-let highestLiveRev = 0, highestLiveOrders = 0;
+let highestLiveRev = 0, highestLiveOrders = 0, highestLiveDate = "";
 
 /* ---------- stage scaling + burn-in drift ---------- */
 function fit() {
@@ -112,6 +112,14 @@ function render(s) {
     $("subline").textContent = s.daily.subline;
   }
   if (!s.is_past_date) {
+    if (s.date && highestLiveDate && highestLiveDate !== s.date) {
+      // Midnight rollover! Reset live counters for the new day
+      highestLiveRev = 0;
+      highestLiveOrders = 0;
+      shownRev = 0;
+      try { localStorage.removeItem("shopboard_last_state"); } catch {}
+    }
+    if (s.date) highestLiveDate = s.date;
     if (s.revenue < highestLiveRev) s.revenue = highestLiveRev;
     else highestLiveRev = s.revenue;
     if (s.orders < highestLiveOrders) s.orders = highestLiveOrders;
@@ -158,6 +166,12 @@ function render(s) {
   // ads
   const be = s.break_even;
   const META_SUNRISE_ICON = '<img src="/meta-sunrise.png?v=2" alt="Meta" class="weather-ico" style="width:1.15em;height:1.15em;object-fit:contain;vertical-align:middle;display:inline-block;filter:drop-shadow(0 4px 12px rgba(0,0,0,0.08));">';
+  const adsLabel = document.querySelector(".ads .label") || $("adslabel");
+  if (adsLabel) {
+    adsLabel.textContent = s.is_past_date
+      ? (s.is_date_range ? `Ads (${s.selected_date})` : `Ads on ${s.selected_date}`)
+      : "Ads today";
+  }
   if (s.spend) {
     const r = s.roas_real, early = s.spend < 1500;
     $("roas").innerHTML = `${r.toFixed(2)}<small>x</small>`;
@@ -175,19 +189,22 @@ function render(s) {
     $("roas").innerHTML = "-"; $("weather").innerHTML = META_SUNRISE_ICON;
     $("roasnote").textContent = !s.meta_on ? "connect Meta ads to see ad numbers here"
       : s.meta_error ? "⚠️ Meta isn't answering: ask your AI to check the Meta token"
-      : "first ad numbers of the day are on their way";
+      : (s.is_past_date ? "No ad spend recorded for this date" : "first ad numbers of the day are on their way");
     $("spend").textContent = "₹0"; $("mroas").textContent = "-";
-    $("camps").innerHTML = '<div class="dim">No ad spend yet today.</div>';
+    $("camps").innerHTML = `<div class="dim">${s.is_past_date ? "No ad spend recorded for this date." : "No ad spend yet today."}</div>`;
   }
   if (s.spend && s.campaigns && s.campaigns.length) {
     const scale = 4;
+    const metaNote = s.is_past_date
+      ? `Meta ad spend for ${s.selected_date}`
+      : `Meta numbers as of ${s.meta_at || "-"}, they refresh every 15 min`;
     $("camps").innerHTML = s.campaigns.slice(0, window.CAMP_LIMIT || 5).map(c => {
       if (window.renderCampaign) return window.renderCampaign(c, be);
       const r = c.roas || 0, col = r >= be ? "var(--good)" : r >= be * .75 ? "var(--warn)" : "var(--bad)";
       return `<div class="camp"><span class="nm">${esc(c.short)}</span><span class="rv">${c.roas ? c.roas.toFixed(1) + "x" : "no sales yet"}</span>
         <div class="bar"><b style="width:${Math.min(100, r / scale * 100)}%;background:${col}"></b><span class="be" style="left:${be / scale * 100}%"></span></div>
         <div class="meta"><span>₹${inr(c.spend)} spent</span><span>${c.purchases} purchase${c.purchases === 1 ? "" : "s"} on Meta</span></div></div>`;
-    }).join("") + (window.renderCampaign ? "" : `<div class="dim" style="font-size:20px">Meta numbers as of ${s.meta_at || "-"}, they refresh every 15 min</div>`);
+    }).join("") + (window.renderCampaign ? "" : `<div class="dim" style="font-size:20px">${metaNote}</div>`);
   }
 
   // chips: leading chips for the top city and for cancelled/refunded/failed,
@@ -275,12 +292,17 @@ try {
     const raw = localStorage.getItem("shopboard_last_state");
     if (raw) {
       const cached = JSON.parse(raw);
-      if (cached && cached.revenue !== undefined) {
+      // Only restore cached state if it belongs to today's local store date (IST UTC+5:30)
+      const nowIST = new Date(Date.now() + 5.5 * 3600 * 1000).toISOString().slice(0, 10);
+      if (cached && cached.revenue !== undefined && cached.date === nowIST) {
+        highestLiveDate = cached.date;
         render(cached);
         const live = $("live");
         if (live) live.classList.remove("off");
         const lt = $("livetxt");
         if (lt) lt.textContent = "live";
+      } else {
+        localStorage.removeItem("shopboard_last_state");
       }
     }
   } catch {}
@@ -292,6 +314,14 @@ function esc(t) { return String(t).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<":
 
 function countTo(target) {
   if (!state || !state.is_past_date) {
+    if (state && state.date) {
+      if (highestLiveDate && highestLiveDate !== state.date) {
+        highestLiveRev = 0;
+        highestLiveOrders = 0;
+        shownRev = 0;
+      }
+      highestLiveDate = state.date;
+    }
     if (target < highestLiveRev) target = highestLiveRev;
     else highestLiveRev = target;
   }
