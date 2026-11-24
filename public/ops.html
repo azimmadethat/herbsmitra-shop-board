@@ -686,8 +686,11 @@
           <option value="yesterday">Yesterday</option>
           <option value="last7">Last 7 Days</option>
           <option value="last30">Last 30 Days</option>
+          <option value="last90">Last 90 Days</option>
           <option value="this_month">This Month</option>
           <option value="last_month">Last Month</option>
+          <option value="whole_year">Whole Year</option>
+          <option value="last_year">Last 1 Year (365 Days)</option>
         </select>
       </div>
 
@@ -1162,8 +1165,29 @@ window.filterByPipeline = function(statusKey) {
   renderOrders();
 };
 
+function formatOrderTime(o, isRange) {
+  let timeStr = o.at || "";
+  let formattedTime = timeStr;
+  if (timeStr && timeStr.includes(":")) {
+    const parts = timeStr.split(":");
+    let h = parseInt(parts[0], 10);
+    const m = parts[1] || "00";
+    if (!isNaN(h)) {
+      const ampm = h >= 12 ? "PM" : "AM";
+      let h12 = h % 12;
+      if (h12 === 0) h12 = 12;
+      formattedTime = `${h12}:${m} ${ampm}`;
+    }
+  }
+  if (isRange && o.date) {
+    return `<span style="display:block;font-size:10px;color:var(--muted);font-weight:600;">${esc(o.date)}</span>${esc(formattedTime)}`;
+  }
+  return esc(formattedTime);
+}
+
 function renderOrders() {
   if (!state) return;
+  const isRange = !!state.is_date_range;
   const q = $("search").value.trim().toLowerCase();
   const fStatus = $("statusFilter").value || activeStatusFilter;
   const fPay = $("payFilter").value;
@@ -1181,7 +1205,10 @@ function renderOrders() {
     return hay.includes(q);
   });
 
-  $("orderCount").textContent = `(${filtered.length} of ${allOrders.length})`;
+  const totalOrdersCount = state.orders || allOrders.length;
+  $("orderCount").textContent = totalOrdersCount > allOrders.length
+    ? `(Showing ${filtered.length} of ${totalOrdersCount.toLocaleString('en-IN')})`
+    : `(${filtered.length} of ${allOrders.length})`;
   $("ordersEmpty").hidden = filtered.length > 0;
   $("resetFilterBtn").style.display = (q || fStatus || fPay) ? "inline-flex" : "none";
 
@@ -1191,7 +1218,7 @@ function renderOrders() {
     const isCod = /cod|cash\s*on\s*delivery/i.test(o.pay || "");
     const payBadge = isCod ? `<span class="badge pay" style="border-color:#f59e0b;color:#b45309;">💵 COD</span>` : `<span class="badge pay" style="border-color:#3b82f6;color:#1d4ed8;">💳 Prepaid</span>`;
     return `<tr>
-      <td class="order-time">${o.date ? `<span style="display:block;font-size:10px;color:var(--muted);font-weight:600;">${esc(o.date)}</span>` : ""}${esc(o.at)}</td>
+      <td class="order-time">${formatOrderTime(o, isRange)}</td>
       <td class="order-id">${esc(o.name)}</td>
       <td><b>${esc(o.first || "Customer")}</b></td>
       <td>${esc(o.city || "–")}</td>
@@ -1669,6 +1696,19 @@ if ($("quickRangeSelect")) {
       updateNavLinks();
       showLoading(`Loading Last 30 Days (${from} to ${to})…`, "Fetching orders and revenue");
       poll(true);
+    } else if (val === "last90") {
+      const from = addDaysStr(currentLiveDate, -89);
+      const to = currentLiveDate;
+      setDateMode("range");
+      if ($("startDatePicker")) $("startDatePicker").value = from;
+      if ($("endDatePicker")) $("endDatePicker").value = to;
+      selectedStartDate = from;
+      selectedEndDate = to;
+      selectedDate = null;
+      if ($("liveTodayBtn")) $("liveTodayBtn").style.display = "inline-flex";
+      updateNavLinks();
+      showLoading(`Loading Last 90 Days (${from} to ${to})…`, "Fetching 90 days total data");
+      poll(true);
     } else if (val === "this_month") {
       const tm = getThisMonthRange(currentLiveDate);
       setDateMode("range");
@@ -1692,6 +1732,33 @@ if ($("quickRangeSelect")) {
       if ($("liveTodayBtn")) $("liveTodayBtn").style.display = "inline-flex";
       updateNavLinks();
       showLoading(`Loading Last Month (${lm.from} to ${lm.to})…`, "Fetching full month's data");
+      poll(true);
+    } else if (val === "whole_year") {
+      const yr = currentLiveDate.slice(0, 4);
+      const from = `${yr}-01-01`;
+      const to = currentLiveDate;
+      setDateMode("range");
+      if ($("startDatePicker")) $("startDatePicker").value = from;
+      if ($("endDatePicker")) $("endDatePicker").value = to;
+      selectedStartDate = from;
+      selectedEndDate = to;
+      selectedDate = null;
+      if ($("liveTodayBtn")) $("liveTodayBtn").style.display = "inline-flex";
+      updateNavLinks();
+      showLoading(`Loading Whole Year (${from} to ${to})…`, "Fetching whole year's total data");
+      poll(true);
+    } else if (val === "last_year") {
+      const from = addDaysStr(currentLiveDate, -365);
+      const to = currentLiveDate;
+      setDateMode("range");
+      if ($("startDatePicker")) $("startDatePicker").value = from;
+      if ($("endDatePicker")) $("endDatePicker").value = to;
+      selectedStartDate = from;
+      selectedEndDate = to;
+      selectedDate = null;
+      if ($("liveTodayBtn")) $("liveTodayBtn").style.display = "inline-flex";
+      updateNavLinks();
+      showLoading(`Loading Last 1 Year (${from} to ${to})…`, "Fetching 1 year's total data");
       poll(true);
     }
     e.target.value = "";

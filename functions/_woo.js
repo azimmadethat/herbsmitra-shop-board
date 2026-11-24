@@ -182,12 +182,24 @@ async function ordersForDay(env, targetDate, storeName, tz) {
   return raw.map(o => mapOrder(o, storeName, tz)).filter(o => o.at.date === targetDate);
 }
 
-async function ordersForDateRange(env, startDate, endDate, storeName, tz) {
+async function ordersForDateRange(env, startDate, endDate, storeName, tz, maxPages = 40) {
   // Query orders covering window from startDate to endDate (with buffer)
   const after = addDays(startDate, -1) + "T23:00:00";
   const before = addDays(endDate, 1) + "T01:00:00";
-  const raw = await wooOrders(env, { after, before, fields: TODAY_FIELDS, maxPages: 60, order: "desc" });
+  const raw = await wooOrders(env, { after, before, fields: TODAY_FIELDS, maxPages, order: "desc" });
   return raw.map(o => mapOrder(o, storeName, tz)).filter(o => o.at.date >= startDate && o.at.date <= endDate);
+}
+
+async function wooSalesReport(env, startDate, endDate) {
+  try {
+    const raw = await wooRaw(env, "/reports/sales", { date_min: startDate, date_max: endDate });
+    if (Array.isArray(raw.data) && raw.data.length > 0) {
+      return raw.data[0];
+    }
+  } catch (err) {
+    console.warn("WooCommerce sales report fetch error:", err.message);
+  }
+  return null;
 }
 
 /** 14 days of hourly sales and per-day order counts, aggregated here. */
@@ -338,12 +350,22 @@ export async function snapshot(env, targetDate = null, targetEndDate = null) {
     ? { since: startDate, until: endDate }
     : (isCustomDate ? { since: startDate, until: startDate } : { since: l.date, until: l.date });
 
-  const [{ orders: all }, hist, meta, stock] = await Promise.all([
+  const spanDays = isRange
+    ? Math.max(1, Math.round((new Date(endDate + "T23:59:59Z") - new Date(startDate + "T00:00:00Z")) / 86400000))
+    : 1;
+  const isLongRange = isRange && spanDays > 14;
+
+  const [{ orders: all, report: salesReport }, hist, meta, stock] = await Promise.all([
     isRange
-      ? ordersForDateRange(env, startDate, endDate, storeName, tz).then(list => ({ orders: list }))
+      ? (isLongRange
+          ? Promise.all([
+              ordersForDateRange(env, startDate, endDate, storeName, tz, 2),
+              wooSalesReport(env, startDate, endDate),
+            ]).then(([list, report]) => ({ orders: list, report }))
+          : ordersForDateRange(env, startDate, endDate, storeName, tz, 40).then(list => ({ orders: list, report: null })))
       : (isCustomDate
-          ? ordersForDay(env, today, storeName, tz).then(list => ({ orders: list }))
-          : ordersSince(env, midnightISO(now, tz), storeName, tz, today).then(async list => ({ orders: list }))),
+          ? ordersForDay(env, today, storeName, tz).then(list => ({ orders: list, report: null }))
+          : ordersSince(env, midnightISO(now, tz), storeName, tz, today).then(async list => ({ orders: list, report: null }))),
     history(env, l.date, storeName, tz),
     metaCampaigns(env, storeName, metaRange).catch(e => ({ error: String(e.message || e), campaigns: [] })),
     lowStock(env).catch(() => null),
@@ -383,7 +405,14 @@ export async function snapshot(env, targetDate = null, targetEndDate = null) {
   let finalRev = Math.round(calculatedRev);
   let finalOrdersCount = orders.length;
 
-  if (!isCustomDate && !isRange) {
+  if (isLongRange && salesReport) {
+    const repSales = parseFloat(salesReport.total_sales || salesReport.net_sales || 0);
+    const repOrders = parseInt(salesReport.total_orders || 0, 10);
+    if (repSales > 0 || repOrders > 0) {
+      finalRev = Math.round(repSales);
+      finalOrdersCount = repOrders;
+    }
+  } else if (!isCustomDate && !isRange) {
     // Monotonic ratchet: live sales and order counts never decrease within the same day!
     if (LATEST_TODAY_CACHE.date === today) {
       finalRev = Math.max(finalRev, LATEST_TODAY_CACHE.revenue);
@@ -414,10 +443,28 @@ export async function snapshot(env, targetDate = null, targetEndDate = null) {
   // COD is payment_method "cod" in WooCommerce.
   const isCod = o => o.method === "cod" || /cash on delivery/i.test(o.pay || "") || /^\s*cod\s*$/i.test(o.pay || "");
   const codList = orders.filter(isCod), preList = orders.filter(o => !isCod(o));
-  const payment = {
+  let payment = {
     cod: { orders: codList.length, revenue: Math.round(codList.reduce((a, o) => a + o.amount, 0)) },
     prepaid: { orders: preList.length, revenue: Math.round(preList.reduce((a, o) => a + o.amount, 0)) },
   };
+  if (isLongRange && salesReport && finalOrdersCount > orders.length && orders.length > 0) {
+    const codSampleOrders = codList.length;
+    const preSampleOrders = preList.length;
+    const codSampleRev = codList.reduce((a, o) => a + o.amount, 0);
+    const preSampleRev = preList.reduce((a, o) => a + o.amount, 0);
+    const totalSampleRev = (codSampleRev + preSampleRev) || 1;
+    const totalSampleOrders = (codSampleOrders + preSampleOrders) || 1;
+    const codRatioOrders = codSampleOrders / totalSampleOrders;
+    const codRatioRev = codSampleRev / totalSampleRev;
+    const scaledCodOrders = Math.round(finalOrdersCount * codRatioOrders);
+    const scaledPreOrders = Math.max(0, finalOrdersCount - scaledCodOrders);
+    const scaledCodRev = Math.round(finalRev * codRatioRev);
+    const scaledPreRev = Math.max(0, finalRev - scaledCodRev);
+    payment = {
+      cod: { orders: scaledCodOrders, revenue: scaledCodRev },
+      prepaid: { orders: scaledPreOrders, revenue: scaledPreRev },
+    };
+  }
   const prodMap = {};
   for (const o of orders) for (const it of o.items) {
     const e = prodMap[it.name] || (prodMap[it.name] = { name: it.name, qty: 0, revenue: 0 });
@@ -425,11 +472,21 @@ export async function snapshot(env, targetDate = null, targetEndDate = null) {
   }
   const product_sales = Object.values(prodMap).sort((a, b) => b.qty - a.qty || b.revenue - a.revenue).slice(0, 10)
     .map(p => ({ name: p.name, qty: p.qty, revenue: Math.round(p.revenue) }));
-  const customers = {
+  let customers = {
     new: orders.filter(o => o.customerId && o.new).length,
     returning: orders.filter(o => o.customerId && !o.new).length,
     guest: orders.filter(o => !o.customerId).length,
   };
+  if (isLongRange && salesReport && finalOrdersCount > orders.length && orders.length > 0) {
+    const repCust = parseInt(salesReport.total_customers || 0, 10);
+    if (repCust > 0) {
+      customers = {
+        new: repCust,
+        returning: Math.max(0, finalOrdersCount - repCust),
+        guest: 0,
+      };
+    }
+  }
 
   // Compare benchmark: yesterday, or the most recent day with recorded sales if yesterday was inactive
   let compareDay = yday;
@@ -456,7 +513,21 @@ export async function snapshot(env, targetDate = null, targetEndDate = null) {
   for (const o of orders) for (const it of o.items) products[it.name] = (products[it.name] || 0) + it.qty;
 
   let monthBest = null;
-  if (isRange) {
+  if (isLongRange && salesReport && salesReport.totals && Object.keys(salesReport.totals).length > 0) {
+    const entries = Object.entries(salesReport.totals);
+    let maxRev = -1;
+    let bestD = null;
+    for (const [d, t] of entries) {
+      const s = parseFloat(t.sales || 0);
+      if (s > maxRev) {
+        maxRev = s;
+        bestD = d;
+      }
+    }
+    if (bestD && maxRev > 0) {
+      monthBest = { date: bestD, revenue: Math.round(maxRev) };
+    }
+  } else if (isRange) {
     const dayMap = {};
     for (const o of orders) dayMap[o.at.date] = (dayMap[o.at.date] || 0) + o.amount;
     const days = Object.keys(dayMap);
@@ -473,7 +544,19 @@ export async function snapshot(env, targetDate = null, targetEndDate = null) {
 
   // Daily History for Range or Calendar
   let dailyHistory = [];
-  if (isRange) {
+  if (isLongRange && salesReport && salesReport.totals && Object.keys(salesReport.totals).length > 0) {
+    dailyHistory = Object.entries(salesReport.totals).map(([d, t]) => {
+      const dOrders = parseInt(t.orders || 0, 10);
+      const dRev = Math.round(parseFloat(t.sales || 0));
+      return {
+        date: d,
+        orders: dOrders,
+        revenue: dRev,
+        aov: dOrders > 0 ? Math.round(dRev / dOrders) : 0,
+        is_today: d === l.date
+      };
+    }).sort((a, b) => a.date.localeCompare(b.date));
+  } else if (isRange) {
     const dayMap = {};
     for (const o of effectiveAll) {
       if (o.cancelled) continue;
@@ -517,8 +600,8 @@ export async function snapshot(env, targetDate = null, targetEndDate = null) {
     is_date_range: isRange,
     store_name: storeName,
     revenue: Math.round(rev),
-    orders: orders.length,
-    aov: orders.length ? Math.round(rev / orders.length) : 0,
+    orders: finalOrdersCount,
+    aov: finalOrdersCount ? Math.round(rev / finalOrdersCount) : 0,
     yesterday_by_now: Math.round(yByNow),
     yesterday_total: Math.round(yTotal),
     vs_yesterday_pct: isRange ? null : vsYesterdayPct,
@@ -568,7 +651,7 @@ export async function snapshot(env, targetDate = null, targetEndDate = null) {
     if (endDate < l.date) {
       await cachePut(env, `snap-range-${startDate}_${endDate}`, snap, 86400);
     } else {
-      await cachePut(env, `snap-range-${startDate}_${endDate}`, snap, 60);
+      await cachePut(env, `snap-range-${startDate}_${endDate}`, snap, isLongRange ? 1800 : 60);
     }
   } else if (isCustomDate) {
     await cachePut(env, `snap-day-${today}`, snap, 86400);
