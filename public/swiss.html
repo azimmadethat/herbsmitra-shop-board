@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>Shop Board · Swiss</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+/* Swiss minimal: white, black, one orange. Big numbers, thin rules, nothing extra. */
+:root { --ink: #111; --dim: #8a8a8a; --rule: #e4e4e4; --acc: #ff4f00; --good: #11a36a; --bad: #e0402a; --bg: #fbfaf8; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 100%; height: 100%; overflow: hidden; background: var(--bg); }
+body { font-family: "Inter Tight", "Helvetica Neue", Arial, sans-serif; color: var(--ink); -webkit-font-smoothing: antialiased; font-feature-settings: "tnum" 1; }
+#stage { position: absolute; left: 50%; top: 50%; width: 1920px; height: 1080px; transform: translate(-50%,-50%); padding: 56px 96px 44px; display: flex; flex-direction: column; }
+.top { display: grid; grid-template-columns: 1fr auto 1fr; align-items: baseline; font-size: 22px; padding-bottom: 22px; border-bottom: 2px solid var(--ink); }
+.brand { font-weight: 600; letter-spacing: -.3px; }
+#clock { color: var(--dim); } #clock b { color: var(--ink); font-weight: 500; }
+.live { justify-self: end; display: flex; align-items: center; gap: 10px; color: var(--dim); }
+.live .dot { width: 10px; height: 10px; background: var(--acc); border-radius: 50%; animation: blink 2s ease-in-out infinite; }
+@keyframes blink { 50% { opacity: .25; } }
+
+.hero { display: grid; grid-template-columns: 1fr 520px; gap: 80px; margin-top: 36px; }
+.lbl { font-size: 20px; font-weight: 500; color: var(--dim); letter-spacing: .4px; }
+#rev { font-size: 230px; font-weight: 500; letter-spacing: -14px; line-height: .86; margin-top: 18px; white-space: nowrap; }
+#rev .rs { font-weight: 300; color: var(--acc); letter-spacing: 0; margin-right: 10px; font-size: 170px; }
+#rev.bump #revnum { animation: flash 1s; }
+@keyframes flash { 20% { color: var(--acc); } }
+#headline { font-size: 26px; color: var(--dim); margin-top: 26px; max-width: 1000px; }
+.facts { border-top: 1px solid var(--ink); }
+.fact { display: flex; justify-content: space-between; align-items: baseline; padding: 14px 0; border-bottom: 1px solid var(--rule); font-size: 24px; color: var(--dim); }
+.fact b { font-size: 46px; font-weight: 500; color: var(--ink); letter-spacing: -1px; }
+#vsy { font-size: 46px; font-weight: 500; letter-spacing: -1px; color: var(--good); }
+#vsy.down { color: var(--bad); }
+#vsy small { display: none; }
+
+.race { margin-top: 40px; position: relative; }
+.track { position: relative; height: 4px; background: var(--rule); }
+.track .fill { position: absolute; left: 0; top: 0; bottom: 0; background: var(--acc); transition: width 1.2s cubic-bezier(.2,.9,.3,1); }
+.track .mark { display: none !important; }
+.track .runner { position: absolute; top: -9px; width: 22px; height: 22px; margin-left: -11px; border-radius: 50%; background: var(--acc); font-size: 0; transition: left 1.2s; box-shadow: 0 0 0 6px rgba(255,79,0,.15); }
+.legend { display: flex; justify-content: space-between; font-size: 20px; color: var(--dim); margin-top: 22px; }
+
+.bottom { margin-top: auto; display: grid; grid-template-columns: 1fr 640px; gap: 80px; align-items: end; }
+#bubble { display: flex; gap: 22px; align-items: flex-start; }
+#emo { font-size: 40px; filter: grayscale(.2); margin-top: 8px; }
+#itext { font-size: 60px; font-weight: 500; letter-spacing: -2px; line-height: 1.05; transition: opacity .4s; max-width: 1000px; }
+#itext.out { opacity: 0; }
+#itext .q { display: block; font-size: 24px; font-weight: 400; color: var(--acc); letter-spacing: 0; margin-bottom: 8px; }
+#bubble.answer #itext { font-size: 42px; letter-spacing: -1px; }
+
+.ads .head { display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 1px solid var(--ink); padding-bottom: 14px; }
+#roas { font-size: 96px; font-weight: 500; letter-spacing: -5px; line-height: .9; }
+#roas small { font-size: 50px; font-weight: 300; color: var(--dim); letter-spacing: 0; }
+.ads .side { text-align: right; font-size: 20px; color: var(--dim); line-height: 1.5; }
+.ads .side b { color: var(--ink); font-weight: 500; }
+#roasnote { font-size: 18px; color: var(--dim); margin-top: 10px; }
+#camps { margin-top: 6px; }
+.cr { display: grid; grid-template-columns: 1fr 120px 90px; padding: 12px 0; border-bottom: 1px solid var(--rule); font-size: 22px; align-items: baseline; }
+.cr .n { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cr .s { color: var(--dim); text-align: right; font-size: 19px; }
+.cr .v { text-align: right; font-weight: 600; }
+
+footer { margin-top: 26px; padding-top: 18px; border-top: 2px solid var(--ink); display: flex; align-items: center; gap: 30px; font-size: 20px; color: var(--dim); }
+#chips { display: flex; gap: 34px; overflow: hidden; white-space: nowrap; flex: 1; }
+.chip { animation: fade .8s; } .chip b { color: var(--ink); font-weight: 500; }
+@keyframes fade { from { opacity: 0; } }
+#mic { flex: none; border: 1.5px solid var(--ink); background: none; border-radius: 40px; padding: 10px 22px; font: 500 19px "Inter Tight", sans-serif; color: var(--ink); display: flex; gap: 10px; align-items: center; cursor: pointer; }
+#mic i { font-style: normal; width: 10px; height: 10px; border-radius: 50%; background: var(--acc); font-size: 0; }
+#mic.listening { background: var(--acc); color: #fff; border-color: var(--acc); }
+
+#toast { position: absolute; left: 0; right: 0; top: 0; height: 190px; z-index: 50; background: var(--acc); color: #fff; display: flex; align-items: center; gap: 40px; padding: 0 96px;
+  transform: translateY(-115%); transition: transform .6s cubic-bezier(.7,0,.2,1); }
+#toast.show { transform: none; }
+#tbig { display: none; }
+#th { font-size: 26px; font-weight: 500; opacity: .85; }
+#tp { font-size: 40px; font-weight: 500; letter-spacing: -1px; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#tamt { font-size: 110px; font-weight: 500; letter-spacing: -5px; }
+#milestone { position: absolute; inset: 0; z-index: 55; background: var(--acc); color: #fff; display: flex; flex-direction: column; justify-content: center; padding: 0 96px; opacity: 0; pointer-events: none; transition: opacity .5s; }
+#milestone.show { opacity: 1; }
+#milestone h2 { font-size: 340px; font-weight: 500; letter-spacing: -18px; line-height: .9; }
+#milestone p { font-size: 40px; font-weight: 400; margin-top: 20px; }
+#confetti { display: none; }
+#unlock { position: fixed; inset: 0; z-index: 100; display: none; place-items: center; background: rgba(251,250,248,.94); font-size: 40px; font-weight: 500; text-align: center; cursor: pointer; }
+#unlock.show { display: grid; }
+#unlock small { display: block; font-size: 20px; font-weight: 400; color: var(--dim); margin-top: 10px; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div class="top"><span class="brand storename"></span><span id="clock"></span><span class="live" id="live"><span class="dot"></span><span id="livetxt">Live</span></span></div>
+  <div class="hero">
+    <div>
+      <div class="lbl">Sales today</div>
+      <div id="rev"><span class="rs">₹</span><span id="revnum">0</span></div>
+      <div id="headline"></div>
+    </div>
+    <div class="facts">
+      <div class="fact"><span id="orderword">Orders</span><b id="orders">0</b></div>
+      <div class="fact"><span>Per order</span><b id="aov">₹0</b></div>
+      <div class="fact"><span>Vs yesterday, same time</span><span id="vsy">–</span></div>
+      <div class="fact"><span>New customers</span><b id="newc">0</b></div>
+    </div>
+  </div>
+  <div class="race" id="race" hidden>
+    <div class="track"><div class="fill" id="rfill"></div><div class="mark" id="rmark"></div><div class="mark proj" id="rproj" hidden></div><div class="runner" id="runner"></div></div>
+    <div class="legend"><span id="rleft"></span><span id="rright"></span></div>
+  </div>
+  <div class="bottom">
+    <div id="bubble"><span id="emo">·</span><span id="itext">Good morning.</span></div>
+    <div class="ads">
+      <div class="head"><div><div class="lbl">Return on ads</div><div id="roas">–</div></div>
+        <div class="side">Spent <b id="spend">₹0</b><br>Meta says <b id="mroas">–</b></div></div>
+      <div id="camps"></div>
+      <div id="roasnote"></div>
+    </div>
+  </div>
+  <footer><span>Latest</span><div id="chips"></div></footer>
+  <div id="toast"><span id="tbig"></span><div><div id="th">New order</div></div><div id="tp"></div><span id="tamt"></span></div>
+  <div id="milestone"><h2 id="mh">₹25,000</h2><p>Crossed today.</p></div>
+</div>
+<canvas id="confetti"></canvas>
+<div id="unlock"><div>Click to enable sound<small>Browsers need one click before they can play sound. The TV app doesn't.</small></div></div>
+<script>
+window.DESIGN = "swiss";
+window.BOARD_COPY = { toastTitle: ["", "New order", "New order", "Big order", "Huge order"], orderWord: ["Order", "Orders"] };
+window.CAMP_LIMIT = 4;
+window.renderCampaign = (c, be) => {
+  const r = c.roas || 0, col = r >= be ? "var(--good)" : r >= be * .75 ? "var(--ink)" : "var(--bad)";
+  return `<div class="cr"><span class="n">${esc(c.short)}</span><span class="s">₹${inr(c.spend)}</span><span class="v" style="color:${col}">${c.roas ? c.roas.toFixed(2) : "–"}</span></div>`;
+};
+window.renderChip = o => `${o.at} <b>₹${inr(o.amount)}</b> ${esc(o.city || "")}`;
+document.addEventListener("board:state", e => {
+  document.getElementById("newc").textContent = e.detail.new_customers ?? 0;
+  const v = document.getElementById("vsy");
+  if (v.hidden) { v.hidden = false; v.className = ""; v.textContent = "–"; }   // keep the row, just show a dash
+});
+</script>
+<script src="/board.js?v=1"></script>
+</body>
+</html>

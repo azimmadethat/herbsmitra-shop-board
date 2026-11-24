@@ -1,0 +1,260 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>Shop Board</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg1: #fff3d6; --bg2: #ffd59e; --ink: #3b2412; --soft: #7a5638;
+  --card: rgba(255,255,255,.72); --accent: #ff7a1a; --accent2: #ffb800;
+  --good: #1f9d55; --warn: #e08a00; --bad: #d64545; --blob: #ffcf5c;
+  --blob-cheek: #ff9a7a; --line: rgba(59,36,18,.12);
+}
+body[data-theme="chai"]     { --bg1:#f6eadf; --bg2:#d9b99b; --ink:#3a2418; --soft:#7b5a46; --accent:#b5541f; --accent2:#e3a35b; --blob:#e8c39e; --blob-cheek:#e2836a; }
+body[data-theme="monsoon"]  { --bg1:#e3f1f4; --bg2:#9fd0da; --ink:#10343c; --soft:#3f6a73; --accent:#0f8aa0; --accent2:#3cc5a8; --blob:#8fe0d2; --blob-cheek:#ff9db0; }
+body[data-theme="rasmalai"] { --bg1:#fff6ec; --bg2:#f6d3c8; --ink:#4a2a24; --soft:#86584e; --accent:#e0607e; --accent2:#f2b134; --blob:#ffe1a8; --blob-cheek:#ff8fa3; }
+body[data-theme="bazaar"]   { --bg1:#ffe6f2; --bg2:#ffb3d1; --ink:#3d0f2b; --soft:#7d3a63; --accent:#e5197a; --accent2:#7a2cff; --blob:#ffd23f; --blob-cheek:#ff6fa8; }
+body[data-theme="dosa"]     { --bg1:#fdf6e0; --bg2:#e9d48a; --ink:#33280b; --soft:#6d5d2b; --accent:#c96a00; --accent2:#3d9b3d; --blob:#f6c445; --blob-cheek:#f08a5d; }
+body[data-theme="kulfi"]    { --bg1:#ece9ff; --bg2:#c3b8ff; --ink:#221a4d; --soft:#544a8a; --accent:#6a4cff; --accent2:#ff8bd0; --blob:#ffe9a8; --blob-cheek:#ff9fc9; }
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 100%; height: 100%; overflow: hidden; }
+body {
+  background: var(--bg1); color: var(--ink);
+  font-family: "Baloo 2", system-ui, sans-serif;
+  transition: background .8s, color .8s;
+}
+.bg { position: fixed; inset: 0; background: radial-gradient(120% 90% at 10% 0%, var(--bg1) 0%, var(--bg2) 100%); transition: background 1s; }
+.bg i { position: absolute; border-radius: 50%; filter: blur(40px); opacity: .45; animation: float 38s ease-in-out infinite alternate; }
+.bg i:nth-child(1) { width: 520px; height: 520px; background: var(--accent2); left: -120px; top: 520px; }
+.bg i:nth-child(2) { width: 420px; height: 420px; background: var(--accent); right: -80px; top: -120px; opacity: .25; animation-duration: 46s; }
+.bg i:nth-child(3) { width: 300px; height: 300px; background: #fff; left: 45%; top: 30%; opacity: .5; animation-duration: 30s; }
+@keyframes float { to { transform: translate(140px, -90px) scale(1.15); } }
+
+/* fixed 1920x1080 stage, scaled to the screen */
+#stage {
+  position: absolute; left: 50%; top: 50%; width: 1920px; height: 1080px;
+  transform-origin: center; padding: 48px 64px 40px;
+  display: grid; grid-template-columns: 1fr 700px; grid-template-rows: auto 1fr auto; gap: 28px 40px;
+}
+
+header { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; }
+.clock { font-size: 34px; font-weight: 600; color: var(--soft); font-variant-numeric: tabular-nums; }
+.clock b { color: var(--ink); font-weight: 800; }
+.opener { text-align: center; flex: 1; padding: 0 40px; }
+.opener h1 { font-size: 46px; line-height: 1.05; font-weight: 800; letter-spacing: -.5px; }
+.opener p { font-size: 26px; color: var(--soft); font-weight: 500; margin-top: 4px; }
+.live { font-size: 24px; color: var(--soft); display: flex; align-items: center; gap: 10px; }
+.live .dot { width: 14px; height: 14px; border-radius: 50%; background: var(--good); box-shadow: 0 0 0 0 var(--good); animation: pulse 2s infinite; }
+.live.off .dot { background: var(--bad); animation: none; }
+@keyframes pulse { 70% { box-shadow: 0 0 0 14px transparent; } }
+
+.top-ops-btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 8px 22px; border-radius: 999px;
+  background: var(--card); border: 1px solid var(--line);
+  color: var(--ink); font-family: inherit; font-size: 20px; font-weight: 700;
+  text-decoration: none; cursor: pointer;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.06);
+  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.22s ease, background 0.2s ease, color 0.2s ease;
+  white-space: nowrap; will-change: transform;
+}
+.top-ops-btn:hover { background: var(--accent); color: #fff; transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.12); }
+.top-ops-btn:active { transform: translateY(0) scale(0.96); box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+
+.card { background: var(--card); border-radius: 40px; box-shadow: 0 20px 60px -30px rgba(0,0,0,.35); backdrop-filter: blur(10px); }
+
+/* hero */
+.left { grid-column: 1; grid-row: 2; display: flex; flex-direction: column; gap: 28px; min-height: 0; }
+.hero { padding: 40px 56px 44px; position: relative; }
+.label { font-size: 28px; font-weight: 700; color: var(--soft); text-transform: uppercase; letter-spacing: 3px; }
+.revenue { font-size: 196px; line-height: .95; font-weight: 800; letter-spacing: -4px; font-variant-numeric: tabular-nums; margin-top: 10px; }
+.revenue .rs { font-size: 120px; color: var(--accent); margin-right: 6px; }
+.revenue.bump { animation: bump .7s cubic-bezier(.2,1.6,.4,1); }
+@keyframes bump { 40% { transform: scale(1.06); color: var(--accent); } }
+.stats { display: flex; gap: 18px; margin-top: 18px; flex-wrap: wrap; }
+.pill { font-size: 30px; font-weight: 700; padding: 8px 26px; border-radius: 999px; background: rgba(255,255,255,.75); }
+.pill small { font-weight: 500; color: var(--soft); font-size: 24px; margin-left: 6px; }
+.pill.up { background: var(--good); color: #fff; }
+.pill.down { background: #fff; color: var(--bad); }
+
+/* race track: today vs yesterday */
+.race { margin-top: 30px; }
+.track { position: relative; height: 26px; border-radius: 999px; background: rgba(0,0,0,.08); }
+.track .fill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 999px; background: linear-gradient(90deg, var(--accent2), var(--accent)); transition: width 1.2s cubic-bezier(.2,.9,.3,1); }
+.track .mark { display: none !important; }
+.track .runner { position: absolute; top: 50%; font-size: 40px; transform: translate(-50%, -58%) scaleX(-1); display: inline-block; transition: left 1.2s cubic-bezier(.2,.9,.3,1); }
+.race .legend { display: flex; justify-content: space-between; font-size: 22px; color: var(--soft); margin-top: 12px; font-weight: 600; }
+
+/* mascot + insight */
+.chatrow { flex: 1; display: flex; align-items: center; gap: 22px; min-height: 0; }
+#vee { width: 230px; height: 230px; flex: none; }
+#vee.hop { animation: hop .9s cubic-bezier(.3,1.8,.5,1); }
+#vee.party { animation: party 1.6s ease-in-out; }
+@keyframes hop { 30% { transform: translateY(-60px) scale(.95,1.08); } 60% { transform: translateY(0) scale(1.08,.92); } }
+@keyframes party { 20%,60% { transform: rotate(-12deg) translateY(-40px); } 40%,80% { transform: rotate(12deg) translateY(-40px); } }
+#vee .eye { transform-box: fill-box; transform-origin: center; animation: blink 5s infinite; }
+@keyframes blink { 0%, 94%, 100% { transform: scaleY(1); } 96% { transform: scaleY(.1); } }
+#vee .body { transform-box: fill-box; transform-origin: bottom center; animation: breathe 4s ease-in-out infinite; }
+@keyframes breathe { 50% { transform: scale(1.03, .97); } }
+.bubble { position: relative; flex: 1; padding: 34px 44px; font-size: 48px; line-height: 1.15; font-weight: 700; min-height: 170px; display: flex; align-items: center; gap: 22px; }
+.bubble::before { content: ""; position: absolute; left: -22px; top: 50%; margin-top: -22px; border: 22px solid transparent; border-right-color: var(--card); border-left: 0; }
+.bubble .emo { font-size: 64px; flex: none; }
+.bubble .txt { transition: opacity .4s, transform .4s; }
+.bubble .txt.out { opacity: 0; transform: translateY(16px); }
+.bubble.answer { font-size: 38px; font-weight: 600; }
+.bubble .q { display: block; font-size: 26px; color: var(--soft); font-weight: 600; margin-bottom: 6px; }
+
+/* right column: ads */
+.ads { grid-column: 2; grid-row: 2; padding: 36px 44px; display: flex; flex-direction: column; min-height: 0; }
+.adtop { display: flex; justify-content: space-between; align-items: flex-start; }
+.weather { font-size: 110px; line-height: 1; }
+.roas { font-size: 104px; font-weight: 800; line-height: .9; letter-spacing: -2px; font-variant-numeric: tabular-nums; }
+.roas small { font-size: 46px; color: var(--soft); }
+.roasnote { font-size: 24px; color: var(--soft); font-weight: 600; margin-top: 6px; }
+.spendrow { display: flex; gap: 14px; margin-top: 18px; }
+.spendrow .pill { font-size: 26px; }
+.camps { margin-top: 26px; display: flex; flex-direction: column; gap: 16px; overflow: hidden; }
+.camp { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; font-size: 26px; }
+.camp .nm { font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.camp .rv { font-weight: 800; font-variant-numeric: tabular-nums; }
+.camp .meta { grid-column: 1 / -1; font-size: 20px; color: var(--soft); font-weight: 600; display: flex; justify-content: space-between; }
+.camp .bar { grid-column: 1 / -1; position: relative; height: 14px; border-radius: 999px; background: rgba(0,0,0,.07); }
+.camp .bar b { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 999px; transition: width 1s; }
+.camp .bar .be { position: absolute; top: -5px; bottom: -5px; width: 3px; background: var(--ink); opacity: .45; border-radius: 3px; }
+.dim { color: var(--soft); font-size: 26px; font-weight: 600; }
+
+/* bottom strip */
+footer { grid-column: 1 / -1; display: flex; align-items: center; gap: 16px; overflow: hidden; height: 76px; }
+footer .tag { font-size: 24px; font-weight: 800; color: var(--soft); text-transform: uppercase; letter-spacing: 2px; flex: none; margin-right: 6px; }
+.chip { flex: none; font-size: 26px; font-weight: 600; padding: 10px 24px; border-radius: 999px; background: var(--card); white-space: nowrap; animation: chipin 0.38s cubic-bezier(0.16, 1, 0.3, 1) both; will-change: transform, opacity; }
+.chip b { font-weight: 800; }
+.chip.t3, .chip.t4 { background: var(--accent); color: #fff; }
+@keyframes chipin { from { transform: translateY(14px) scale(0.96); opacity: 0; } to { transform: translateY(0) scale(1); opacity: 1; } }
+.mic { margin-left: auto; flex: none; display: flex; align-items: center; gap: 14px; font-size: 26px; font-weight: 700; padding: 12px 30px 12px 14px; border-radius: 999px; border: 0; background: var(--ink); color: var(--bg1); font-family: inherit; cursor: pointer; outline: none; }
+.mic i { width: 52px; height: 52px; border-radius: 50%; background: var(--accent); display: grid; place-items: center; font-style: normal; font-size: 28px; }
+.mic:focus-visible, .mic.focus { box-shadow: 0 0 0 6px var(--accent2); }
+.mic.listening i { animation: micpulse 1s infinite; }
+@keyframes micpulse { 50% { transform: scale(1.25); background: var(--bad); } }
+
+/* order toast */
+#toast { position: fixed; left: 50%; top: 40px; transform: translate(-50%, -160%) scale(0.96); opacity: 0; z-index: 50; background: #fff; color: var(--ink); border-radius: 36px; padding: 26px 46px 26px 30px; display: flex; align-items: center; gap: 24px; box-shadow: 0 30px 80px -20px rgba(0,0,0,.45); transition: transform 0.42s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease; will-change: transform, opacity; }
+#toast.show { transform: translate(-50%, 0) scale(1); opacity: 1; }
+#toast .big { font-size: 80px; }
+#toast h2 { font-size: 40px; white-space: nowrap; font-weight: 800; line-height: 1.05; }
+#toast p { font-size: 28px; white-space: nowrap; color: var(--soft); font-weight: 600; }
+#toast .amt { font-size: 60px; font-weight: 800; color: var(--accent); margin-left: 20px; font-variant-numeric: tabular-nums; }
+#toast.t4 { background: linear-gradient(120deg, var(--accent), var(--accent2)); color: #fff; }
+#toast.t4 p, #toast.t4 .amt { color: #fff; }
+
+#confetti { position: fixed; inset: 0; pointer-events: none; z-index: 60; }
+
+#milestone { position: fixed; inset: 0; z-index: 55; display: grid; place-items: center; pointer-events: none; opacity: 0; transition: opacity .5s; }
+#milestone.show { opacity: 1; }
+#milestone div { text-align: center; background: var(--ink); color: var(--bg1); padding: 50px 90px; border-radius: 60px; transform: scale(.6); transition: transform .7s cubic-bezier(.2,1.6,.4,1); }
+#milestone.show div { transform: scale(1); }
+#milestone h2 { font-size: 160px; line-height: 1; font-weight: 800; }
+#milestone p { font-size: 44px; font-weight: 700; }
+
+#unlock { position: fixed; inset: 0; z-index: 100; display: none; place-items: center; background: rgba(0,0,0,.55); color: #fff; font-size: 44px; font-weight: 700; cursor: pointer; text-align: center; }
+#unlock.show { display: grid; }
+#unlock small { display: block; font-size: 26px; font-weight: 500; opacity: .8; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+</style>
+</head>
+<body data-theme="mango">
+<div class="bg"><i></i><i></i><i></i></div>
+
+<div id="stage">
+  <header>
+    <div class="clock" id="clock"></div>
+    <div class="opener"><h1 id="headline">Good to see you!</h1><p id="subline">Warming up the numbers…</p></div>
+    <div style="display:flex;align-items:center;gap:18px;">
+      <a id="top-ops-btn" href="/ops.html" class="top-ops-btn" title="Quickly open Operations & All Orders Dashboard">📋 Ops Board</a>
+      <div class="live" id="live"><span class="dot"></span><span id="livetxt">connecting</span></div>
+    </div>
+  </header>
+
+  <section class="left">
+    <div class="card hero">
+      <div class="label">Sales today</div>
+      <div class="revenue" id="rev"><span class="rs">₹</span><span id="revnum">0</span></div>
+      <div class="stats">
+        <span class="pill"><span id="orders">0</span><small id="orderword">orders</small></span>
+        <span class="pill"><span id="aov">₹0</span><small>per order</small></span>
+        <span class="pill" id="vsy" hidden></span>
+      </div>
+      <div class="race" id="race" hidden>
+        <div class="track">
+          <div class="fill" id="rfill"></div>
+          <div class="mark" id="rmark" title="yesterday by now"></div>
+          <div class="mark proj" id="rproj" hidden></div>
+          <div class="runner" id="runner">🏃</div>
+        </div>
+        <div class="legend"><span id="rleft"></span><span id="rright"></span></div>
+      </div>
+    </div>
+
+    <div class="chatrow">
+      <svg id="vee" viewBox="0 0 200 200" aria-hidden="true">
+        <ellipse cx="100" cy="186" rx="62" ry="9" fill="rgba(0,0,0,.12)"/>
+        <g class="body">
+          <path d="M100 30c46 0 74 38 74 86 0 44-32 66-74 66s-74-22-74-66c0-48 28-86 74-86z" fill="var(--blob)"/>
+          <ellipse cx="62" cy="128" rx="13" ry="8" fill="var(--blob-cheek)" opacity=".6"/>
+          <ellipse cx="138" cy="128" rx="13" ry="8" fill="var(--blob-cheek)" opacity=".6"/>
+          <g id="eyes">
+            <ellipse class="eye" cx="76" cy="104" rx="9" ry="12" fill="#2b1a0e"/>
+            <ellipse class="eye" cx="124" cy="104" rx="9" ry="12" fill="#2b1a0e"/>
+            <circle cx="79" cy="99" r="3" fill="#fff"/><circle cx="127" cy="99" r="3" fill="#fff"/>
+          </g>
+          <path id="mouth" d="M84 134q16 16 32 0" stroke="#2b1a0e" stroke-width="5" fill="none" stroke-linecap="round"/>
+          <g id="hat"></g>
+          <text id="zzz" x="150" y="52" font-size="30" font-weight="800" fill="var(--ink)" opacity="0">z z</text>
+        </g>
+      </svg>
+      <div class="card bubble" id="bubble"><span class="emo" id="emo">👋</span><span class="txt" id="itext">Hello! Numbers are on their way.</span></div>
+    </div>
+  </section>
+
+  <aside class="card ads">
+    <div class="label">Ads today</div>
+    <div class="adtop">
+      <div>
+        <div class="roas" id="roas">-</div>
+        <div class="roasnote" id="roasnote">back per ₹1 spent (real sales)</div>
+      </div>
+      <div class="weather" id="weather"><img src="/meta-sunrise.png" alt="Meta" style="width:1.15em;height:1.15em;object-fit:contain;vertical-align:middle;display:inline-block;filter:drop-shadow(0 4px 12px rgba(0,0,0,0.08));"></div>
+    </div>
+    <div class="spendrow">
+      <span class="pill"><span id="spend">₹0</span><small>spent</small></span>
+      <span class="pill"><span id="mroas">-</span><small>Meta says</small></span>
+    </div>
+    <div class="camps" id="camps"><div class="dim">Fetching campaigns from Meta…</div></div>
+  </aside>
+
+  <footer>
+    <span class="tag">Latest</span>
+    <div id="chips" style="display:flex;gap:14px;overflow:hidden;flex:1;min-width:0;align-items:center;padding:4px 0;"></div>
+  </footer>
+  <div id="toast"><span class="big" id="tbig">🛍️</span><div><h2 id="th">New order!</h2><p id="tp"></p></div><span class="amt" id="tamt"></span></div>
+  <div id="milestone"><div><h2 id="mh">₹25,000</h2><p>crossed today! 🎉</p></div></div>
+</div>
+
+<canvas id="confetti"></canvas>
+<div id="unlock"><div>🔊 Click anywhere to turn on order sounds<small>Browsers need one click before they can play sound. The TV app won't.</small></div></div>
+
+<script>window.DESIGN = "classic";</script>
+<script src="/board.js?v=1"></script>
+</body>
+</html>

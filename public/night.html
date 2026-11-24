@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>Shop Board · StandBy</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* StandBy: black glass, rounded widgets, activity rings. Easy on the eyes in a dim office. */
+:root { --pink: #ff2d78; --pink2: #ff6aa2; --green: #a6ff3c; --green2: #50e36b; --blue: #34d4ff; --ink: #fff; --dim: #8e8e93; --w: #151517; --line: rgba(255,255,255,.08); --bad: #ff5a4e; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 100%; height: 100%; overflow: hidden; background: #000; }
+body { font-family: "Inter", system-ui, sans-serif; color: var(--ink); -webkit-font-smoothing: antialiased; font-feature-settings: "tnum" 1; }
+#stage { position: absolute; left: 50%; top: 50%; width: 1920px; height: 1080px; transform: translate(-50%,-50%); padding: 56px 60px; display: grid; grid-template-columns: 860px 1fr; gap: 28px; }
+.wd { background: var(--w); border-radius: 46px; padding: 34px 40px; position: relative; overflow: hidden; min-height: 0; box-shadow: inset 0 0 0 1px var(--line); }
+.k { font-size: 20px; font-weight: 600; color: var(--dim); letter-spacing: .3px; text-transform: uppercase; }
+
+/* rings */
+.rings { display: flex; flex-direction: column; }
+.rings svg { width: 560px; height: 560px; margin: 10px auto 0; display: block; overflow: visible; }
+.center { position: absolute; left: 0; right: 0; top: 278px; text-align: center; pointer-events: none; }
+#rev { font-size: 66px; font-weight: 700; letter-spacing: -3px; line-height: 1; }
+#rev .rs { color: var(--pink); margin-right: 2px; }
+#rev.bump { animation: pulse .8s; }
+@keyframes pulse { 40% { transform: scale(1.06); } }
+.center small { display: block; font-size: 20px; color: var(--dim); margin-top: 6px; font-weight: 500; }
+.leg { margin-top: 24px; display: flex; flex-direction: column; gap: 14px; }
+.lg { display: flex; justify-content: space-between; align-items: baseline; font-size: 24px; font-weight: 600; }
+.lg > span:first-child { color: var(--dim); font-weight: 500; }
+.lg b { font-weight: 700; font-size: 30px; color: #fff; }
+#camps { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 10px; }
+.cr { display: grid; grid-template-columns: 1fr auto; font-size: 21px; color: var(--dim); }
+.cr .n { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cr b { font-weight: 700; }
+#roasnote { font-size: 17px; color: #5a5a5f; margin-top: 10px; }
+
+.right { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 300px 1fr 250px; gap: 28px; min-height: 0; }
+.clockw { display: flex; flex-direction: column; justify-content: center; }
+#bigtime { font-size: 132px; font-weight: 700; letter-spacing: -6px; line-height: .9; }
+#clock { display: none; }
+#bigdate { font-size: 26px; color: var(--pink); font-weight: 600; margin-top: 12px; }
+.live { position: absolute; top: 30px; right: 34px; display: flex; align-items: center; gap: 8px; font-size: 17px; color: var(--dim); font-weight: 600; }
+.live .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--green2); box-shadow: 0 0 12px var(--green2); }
+.ordw #orders { font-size: 120px; font-weight: 800; letter-spacing: -5px; line-height: 1; margin-top: 10px; color: var(--blue); }
+.ordw .sub { font-size: 23px; color: var(--dim); margin-top: 6px; font-weight: 500; }
+.ordw .sub b { color: var(--ink); }
+#vsy { position: absolute; top: 30px; right: 34px; font-size: 22px; font-weight: 700; color: var(--green2); }
+#vsy.down { color: var(--bad); }
+#vsy small { display: none; }
+.chartw { grid-column: 1 / -1; display: flex; flex-direction: column; }
+.chartw .k span { color: var(--pink); }
+#chart { flex: 1; width: 100%; margin-top: 12px; overflow: visible; }
+.ax { font-size: 16px; fill: #5a5a5f; font-family: Inter; font-weight: 600; }
+.notew { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 380px; gap: 30px; }
+#bubble { display: flex; gap: 18px; align-items: center; }
+#emo { font-size: 50px; }
+#itext { font-size: 38px; font-weight: 700; line-height: 1.15; letter-spacing: -.8px; transition: opacity .4s; }
+#itext.out { opacity: 0; }
+#itext .q { display: block; font-size: 19px; font-weight: 500; color: var(--blue); }
+#bubble.answer #itext { font-size: 28px; font-weight: 600; }
+.lat { border-left: 1px solid var(--line); padding-left: 28px; display: flex; flex-direction: column; }
+#chips { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+.chip { display: flex; justify-content: space-between; font-size: 20px; color: var(--dim); white-space: nowrap; animation: in .7s; }
+.chip b { color: var(--ink); }
+@keyframes in { from { opacity: 0; transform: translateY(8px); } }
+#mic { margin-top: auto; align-self: flex-start; border: 0; border-radius: 30px; padding: 10px 20px; background: #2c2c2e; color: #fff; font: 600 18px Inter, sans-serif; display: flex; gap: 10px; align-items: center; cursor: pointer; }
+#mic i { font-style: normal; }
+#mic.listening { background: var(--pink); }
+#headline { display: none; }
+
+/* Dynamic Island order alert */
+#toast { position: absolute; left: 50%; top: 22px; z-index: 50; transform: translateX(-50%); width: 180px; height: 56px; border-radius: 40px; background: #000; box-shadow: 0 0 0 1.5px #222, 0 20px 50px rgba(0,0,0,.7);
+  display: flex; align-items: center; gap: 22px; padding: 0 26px; overflow: hidden; opacity: 0; transition: width .6s cubic-bezier(.3,1.3,.5,1), height .6s cubic-bezier(.3,1.3,.5,1), opacity .3s; }
+#toast.show { width: 940px; height: 140px; opacity: 1; }
+#toast > * { opacity: 0; transition: opacity .3s .25s; } #toast.show > * { opacity: 1; }
+#tbig { width: 84px; height: 84px; border-radius: 22px; display: grid; place-items: center; font-size: 44px; background: linear-gradient(140deg, var(--pink), #ff9f0a); flex: none; }
+#th { font-size: 22px; font-weight: 600; color: var(--dim); }
+#tp { font-size: 28px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 480px; }
+#tamt { margin-left: auto; font-size: 54px; font-weight: 800; color: var(--green); letter-spacing: -2px; }
+#milestone { position: absolute; inset: 0; z-index: 55; display: grid; place-items: center; background: rgba(0,0,0,.88); opacity: 0; pointer-events: none; transition: opacity .5s; text-align: center; }
+#milestone.show { opacity: 1; }
+#milestone h2 { font-size: 220px; font-weight: 800; letter-spacing: -10px; background: linear-gradient(90deg, var(--pink), #ff9f0a, var(--green)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+#milestone p { font-size: 40px; color: var(--dim); font-weight: 600; }
+#confetti { position: fixed; inset: 0; pointer-events: none; z-index: 60; }
+#unlock { position: fixed; inset: 0; z-index: 100; display: none; place-items: center; background: rgba(0,0,0,.8); font-size: 36px; font-weight: 700; text-align: center; cursor: pointer; }
+#unlock.show { display: grid; }
+#unlock small { display: block; font-size: 18px; font-weight: 500; color: var(--dim); margin-top: 8px; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div class="wd rings">
+    <div class="k">Today</div>
+    <svg id="ringsvg" viewBox="0 0 560 560"></svg>
+    <div class="center"><div id="rev"><span class="rs">₹</span><span id="revnum">0</span></div><small>sales today</small></div>
+    <div class="leg">
+      <div class="lg"><span style="color:var(--pink)">● Sales vs all of yesterday</span><b id="lgs">–</b></div>
+      <div class="lg"><span style="color:var(--green)">● Return on ads</span><b><span id="roas">–</span></b></div>
+      <div class="lg"><span>Spent · Meta says</span><b style="font-size:24px"><span id="spend">₹0</span> · <span id="mroas">–</span></b></div>
+    </div>
+    <div id="camps"></div>
+    <div id="roasnote"></div>
+  </div>
+  <div class="right">
+    <div class="wd clockw"><div class="live" id="live"><span class="dot"></span><span id="livetxt">Live</span></div><div id="bigtime"></div><div id="bigdate"></div><div id="clock"></div></div>
+    <div class="wd ordw"><div class="k" id="orderword">Orders</div><div id="vsy" hidden></div><div id="orders">0</div>
+      <div class="sub"><b id="aov">₹0</b> each · <b id="newc">0</b> new</div></div>
+    <div class="wd chartw"><div class="k"><span>━ Today</span> &nbsp; <span style="color:#5a5a5f">┄ Yesterday</span></div><svg id="chart" preserveAspectRatio="none"></svg></div>
+    <div class="wd notew">
+      <div id="bubble"><span id="emo">✨</span><span id="itext">Good to see you.</span></div>
+      <div class="lat"><div class="k">Latest</div><div id="chips"></div></div>
+    </div>
+  </div>
+  <div id="headline"></div>
+  <div id="toast"><div id="tbig">🛍️</div><div><div id="th">New order</div><div id="tp"></div></div><span id="tamt"></span></div>
+  <div id="milestone"><div><h2 id="mh">₹25,000</h2><p>crossed today</p></div></div>
+</div>
+<canvas id="confetti"></canvas>
+<div id="unlock"><div>Tap to turn on sound<small>Browsers need one click before they can play sound. The TV app doesn't.</small></div></div>
+<script>
+window.DESIGN = "night";
+window.BOARD_COPY = { toastEmoji: ["", "🛍️", "🛍️", "🎉", "🤩"], toastTitle: ["", "New order", "New order", "Big order", "Huge order"], orderWord: ["Order", "Orders"] };
+window.CONFETTI = ["#ff2d78", "#a6ff3c", "#34d4ff", "#ff9f0a", "#ffffff"];
+window.CAMP_LIMIT = 3;
+window.renderCampaign = (c, be) => {
+  const r = c.roas || 0, col = r >= be ? "var(--green2)" : r >= be * .75 ? "#ffd60a" : "var(--bad)";
+  return `<div class="cr"><span class="n">${esc(c.short)}</span><b style="color:${col}">${c.roas ? c.roas.toFixed(2) + "x" : "–"}</b></div>`;
+};
+window.renderChip = o => `<span>${o.at} · ${esc(o.city || "")}</span><b>₹${inr(o.amount)}</b>`;
+function tick() {
+  const d = new Date();
+  document.getElementById("bigtime").textContent = d.toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit", hour12: true }).replace(/\s?[ap]m/i, "");
+  document.getElementById("bigdate").textContent = d.toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long" });
+}
+tick(); setInterval(tick, 5000);
+// an Apple-style ring: track, the arc, and a darker overlap arc once it laps 100%
+function ring(r, w, p, c1, c2, id) {
+  const C = 2 * Math.PI * r, a = Math.min(p, 1), o = Math.max(0, Math.min(p - 1, 1));
+  return `<defs><linearGradient id="${id}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${c2}"/><stop offset="1" stop-color="${c1}"/></linearGradient></defs>
+    <circle cx="280" cy="280" r="${r}" fill="none" stroke="${c1}" stroke-opacity=".18" stroke-width="${w}"/>
+    <circle cx="280" cy="280" r="${r}" fill="none" stroke="url(#${id})" stroke-width="${w}" stroke-linecap="round" stroke-dasharray="${C * a} ${C}" transform="rotate(-90 280 280)" style="transition:stroke-dasharray 1.4s cubic-bezier(.2,.9,.3,1)"/>
+    ${o ? `<circle cx="280" cy="280" r="${r}" fill="none" stroke="${c2}" stroke-width="${w}" stroke-linecap="round" stroke-dasharray="${C * o} ${C}" transform="rotate(-90 280 280)" style="filter:drop-shadow(0 0 6px rgba(0,0,0,.8))"/>` : ""}`;
+}
+document.addEventListener("board:state", e => {
+  const s = e.detail, g = id => document.getElementById(id);
+  g("newc").textContent = s.new_customers ?? 0;
+  const ps = s.yesterday_total ? s.revenue / s.yesterday_total : 0;
+  const pr = s.spend ? (s.roas_real || 0) / (s.break_even * 2) : 0;   // full ring = 2x break-even
+  g("ringsvg").innerHTML = ring(252, 52, ps, "#ff2d78", "#ff6aa2", "g1") + ring(192, 52, pr, "#50e36b", "#a6ff3c", "g2");
+  g("lgs").textContent = s.yesterday_total ? Math.round(ps * 100) + "%" : "–";
+  const svg = g("chart"), W = svg.clientWidth || 900, H = svg.clientHeight || 240;
+  svg.setAttribute("viewBox", `0 0 ${W} ${H + 22}`);
+  const c = curvePaths(s, W, H); if (!c) return;
+  const ax = [6, 12, 18].map(h => `<text class="ax" x="${c.X(h)}" y="${H + 20}" text-anchor="middle">${h === 12 ? "12P" : h > 12 ? h - 12 + "P" : h + "A"}</text>`).join("");
+  svg.innerHTML = `<defs><linearGradient id="ca" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff2d78" stop-opacity=".35"/><stop offset="1" stop-color="#ff2d78" stop-opacity="0"/></linearGradient>
+    <filter id="glow"><feGaussianBlur stdDeviation="5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>${ax}
+    <path d="${c.yesterday}" fill="none" stroke="#3a3a3c" stroke-width="3" stroke-dasharray="6 8"/>
+    <path d="${c.todayArea}" fill="url(#ca)"/>
+    <path d="${c.today}" fill="none" stroke="#ff2d78" stroke-width="5" stroke-linejoin="round" stroke-linecap="round" filter="url(#glow)"/>
+    <circle cx="${c.dot[0]}" cy="${c.dot[1]}" r="8" fill="#fff"/>`;
+});
+</script>
+<script src="/board.js?v=1"></script>
+</body>
+</html>

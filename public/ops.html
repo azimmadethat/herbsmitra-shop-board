@@ -1,0 +1,1199 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Shop Board · Operations Command Center</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f8fafc;
+    --card: #ffffff;
+    --card-hover: #f1f5f9;
+    --border: #e2e8f0;
+    --border-subtle: #f1f5f9;
+    --ink: #0f172a;
+    --muted: #64748b;
+    --faint: #94a3b8;
+    --accent: #2563eb;
+    --accent-light: #eff6ff;
+    --good: #16a34a;
+    --good-bg: #f0fdf4;
+    --warn: #d97706;
+    --warn-bg: #fffbeb;
+    --bad: #dc2626;
+    --bad-bg: #fef2f2;
+    --purple: #9333ea;
+    --purple-bg: #faf5ff;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    padding: 0 0 64px 0;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Top Navigation Bar */
+  .navbar {
+    background: #ffffff;
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    box-shadow: 0 1px 3px rgba(0,0,0,.03);
+  }
+  .nav-wrap {
+    max-width: 1440px;
+    margin: 0 auto;
+    padding: 14px 24px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+  .brand-group {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .brand-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #16a34a, #2563eb);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(37,99,235,.25);
+  }
+  .brand-title {
+    font-size: 19px;
+    font-weight: 700;
+    letter-spacing: -.3px;
+    color: var(--ink);
+  }
+  .brand-meta {
+    font-size: 13px;
+    color: var(--muted);
+    font-weight: 500;
+    margin-top: 1px;
+  }
+
+  .nav-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .live-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--good);
+    background: var(--good-bg);
+    border: 1px solid rgba(22,163,74,.2);
+    padding: 6px 14px;
+    border-radius: 999px;
+  }
+  .live-badge .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--good);
+    box-shadow: 0 0 0 3px rgba(22,163,74,.2);
+    animation: livePulse 2s infinite;
+  }
+  .live-badge.off {
+    color: var(--bad);
+    background: var(--bad-bg);
+    border-color: rgba(220,38,38,.2);
+  }
+  .live-badge.off .dot {
+    background: var(--bad);
+    box-shadow: 0 0 0 3px rgba(220,38,38,.2);
+    animation: none;
+  }
+  @keyframes livePulse {
+    70% { box-shadow: 0 0 0 8px transparent; }
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 8px 16px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: #ffffff;
+    color: var(--ink);
+    cursor: pointer;
+    text-decoration: none;
+    transition: all .15s ease;
+  }
+  .btn:hover {
+    background: #f8fafc;
+    border-color: #cbd5e1;
+    transform: translateY(-1px);
+  }
+  .btn.btn-primary {
+    background: var(--accent);
+    color: #ffffff;
+    border-color: var(--accent);
+    box-shadow: 0 2px 8px rgba(37,99,235,.25);
+  }
+  .btn.btn-primary:hover {
+    background: #1d4ed8;
+    border-color: #1d4ed8;
+  }
+
+  /* Main Container */
+  .container {
+    max-width: 1440px;
+    margin: 28px auto 0;
+    padding: 0 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 28px;
+  }
+
+  .section-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 12px;
+  }
+  .section-title {
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: -.2px;
+    color: var(--ink);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .section-sub {
+    font-size: 13px;
+    color: var(--muted);
+    font-weight: 500;
+  }
+
+  /* KPI Grid */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+  }
+  .kpi-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 18px 20px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.04);
+    display: flex;
+    flex-direction: column;
+    transition: box-shadow .2s ease, transform .2s ease;
+  }
+  .kpi-card:hover {
+    box-shadow: 0 6px 18px rgba(0,0,0,.06);
+    transform: translateY(-2px);
+  }
+  .kpi-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .kpi-k {
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .6px;
+    color: var(--muted);
+  }
+  .kpi-icon {
+    font-size: 16px;
+    opacity: .8;
+  }
+  .kpi-v {
+    font-size: 30px;
+    font-weight: 800;
+    letter-spacing: -.8px;
+    color: var(--ink);
+    margin-top: 8px;
+    font-variant-numeric: tabular-nums;
+  }
+  .kpi-d {
+    font-size: 13px;
+    color: var(--muted);
+    margin-top: 4px;
+    font-weight: 500;
+  }
+  .kpi-card.bad .kpi-v { color: var(--bad); }
+  .kpi-card.good .kpi-v { color: var(--good); }
+
+  /* Pipeline Grid */
+  .pipe-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px;
+  }
+  .pipe-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 16px;
+    cursor: pointer;
+    transition: all .2s ease;
+    border-left: 4px solid #cbd5e1;
+  }
+  .pipe-card:hover, .pipe-card.active {
+    box-shadow: 0 4px 14px rgba(0,0,0,.06);
+    transform: translateY(-2px);
+  }
+  .pipe-card.pending { border-left-color: #3b82f6; }
+  .pipe-card.processing { border-left-color: #f59e0b; }
+  .pipe-card.on-hold { border-left-color: #8b5cf6; }
+  .pipe-card.completed { border-left-color: #10b981; }
+  .pipe-card.cancelled { border-left-color: #ef4444; }
+  .pipe-card.refunded { border-left-color: #ec4899; }
+  .pipe-card.failed { border-left-color: #64748b; }
+  .pipe-card .k { font-size: 12px; font-weight: 600; color: var(--muted); }
+  .pipe-card .v { font-size: 24px; font-weight: 800; margin-top: 4px; color: var(--ink); }
+  .pipe-card .d { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+  /* Two Column Split */
+  .cols {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+  @media (max-width: 900px) {
+    .cols { grid-template-columns: 1fr; }
+  }
+
+  /* Table Card */
+  .table-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.04);
+    overflow: hidden;
+  }
+  .scroll-wrap {
+    overflow-x: auto;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    text-align: left;
+  }
+  th {
+    background: #f8fafc;
+    padding: 12px 14px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .6px;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  td {
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--border-subtle);
+    vertical-align: middle;
+    color: var(--ink);
+  }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: #f8fafc; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .rank {
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--muted);
+    background: #f1f5f9;
+    margin-right: 8px;
+  }
+  .rank.top1 { background: #fef3c7; color: #b45309; }
+  .rank.top2 { background: #e2e8f0; color: #475569; }
+  .rank.top3 { background: #fed7aa; color: #c2410c; }
+
+  /* Controls Bar */
+  .controls-bar {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    align-items: center;
+    background: #ffffff;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px 16px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.03);
+  }
+  .search-box {
+    position: relative;
+    flex: 1;
+    min-width: 240px;
+  }
+  .search-box input {
+    width: 100%;
+    padding: 9px 12px 9px 36px;
+    font-family: inherit;
+    font-size: 13px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    outline: none;
+    transition: border-color .15s, box-shadow .15s;
+  }
+  .search-box input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(37,99,235,.15);
+  }
+  .search-box .icon {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 14px;
+    color: var(--faint);
+    pointer-events: none;
+  }
+  select {
+    padding: 9px 14px;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 500;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: #ffffff;
+    color: var(--ink);
+    outline: none;
+    cursor: pointer;
+    transition: border-color .15s;
+  }
+  select:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(37,99,235,.15);
+  }
+
+  /* Status Badges */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 999px;
+    white-space: nowrap;
+    text-transform: capitalize;
+  }
+  .badge.processing { background: #fffbeb; color: #b45309; border: 1px solid rgba(245,158,11,.25); }
+  .badge.completed { background: #f0fdf4; color: #15803d; border: 1px solid rgba(22,163,74,.25); }
+  .badge.pending { background: #eff6ff; color: #1d4ed8; border: 1px solid rgba(37,99,235,.25); }
+  .badge.on-hold { background: #faf5ff; color: #7e22ce; border: 1px solid rgba(147,51,234,.25); }
+  .badge.cancelled, .badge.refunded, .badge.failed { background: #fef2f2; color: #b91c1c; border: 1px solid rgba(220,38,38,.25); }
+  .badge.new { background: #f0fdf4; color: #16a34a; font-weight: 600; }
+  .badge.ret { background: #f1f5f9; color: var(--muted); font-weight: 500; }
+  .badge.pay { background: #f8fafc; border: 1px solid var(--border); color: var(--ink); font-weight: 600; font-family: "JetBrains Mono", monospace; }
+
+  .order-id {
+    font-family: "JetBrains Mono", monospace;
+    font-weight: 600;
+    color: var(--accent);
+  }
+  .order-time {
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .empty-state {
+    padding: 36px 20px;
+    text-align: center;
+    color: var(--muted);
+    font-size: 14px;
+    font-weight: 500;
+  }
+  .empty-state .ico {
+    font-size: 32px;
+    margin-bottom: 8px;
+  }
+
+  .alert-card {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 20px 24px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.04);
+  }
+  .stock-healthy {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--good);
+    font-weight: 600;
+  }
+  .stock-warn {
+    color: var(--warn);
+    font-weight: 600;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  /* Footer Note */
+  .footer-note {
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.6;
+    background: #f1f5f9;
+    padding: 16px 20px;
+    border-radius: 12px;
+    margin-top: 12px;
+  }
+</style>
+</head>
+<body>
+
+<nav class="navbar">
+  <div class="nav-wrap">
+    <div class="brand-group">
+      <img src="/herbsmitra-logo.png" alt="HerbsMitra" style="height:44px;width:auto;object-fit:contain;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.06));">
+      <div>
+        <div class="brand-title" id="store">HerbsMitra · Operations Command Center</div>
+        <div class="brand-meta"><span id="date"></span> · <span id="updated"></span></div>
+      </div>
+    </div>
+    <div class="nav-actions">
+      <div style="display:inline-flex;align-items:center;gap:6px;background:#f1f5f9;border:1px solid var(--border);border-radius:8px;padding:5px 10px;" title="Select date to inspect orders & revenue">
+        <span style="font-size:14px;">📅</span>
+        <input type="date" id="datePicker" style="border:none;background:transparent;font-family:inherit;font-size:13px;font-weight:600;color:var(--ink);outline:none;cursor:pointer;">
+      </div>
+      <button class="btn btn-primary" id="liveTodayBtn" style="display:none;background:#16a34a;border-color:#16a34a;box-shadow:0 2px 8px rgba(22,163,74,0.3);">🔴 Live Today</button>
+      <button class="btn btn-primary" id="bestDaysBtn" title="View Best Days as per orders in Calendar View" style="background:linear-gradient(135deg, #f59e0b, #d97706);border-color:#b45309;color:#fff;box-shadow:0 2px 8px rgba(245,158,11,0.25);font-weight:700;">🏆 Best Days Calendar</button>
+      <span class="live-badge" id="live"><span class="dot"></span> <span id="livetxt">Live Sync</span></span>
+      <select id="designSelect" title="Switch Design View">
+        <option value="apple">🍏 Apple Design</option>
+        <option value="meta">🔷 Meta Design</option>
+        <option value="herbsmitra">🌿 HerbsMitra</option>
+        <option value="classic">🥭 Classic</option>
+        <option value="studio">💻 Studio</option>
+        <option value="garden">🌸 Garden</option>
+        <option value="swiss">🇨🇭 Swiss</option>
+        <option value="night">🌙 Night</option>
+      </select>
+      <a class="btn btn-primary" id="tvlink" href="#">📺 TV Board</a>
+      <button class="btn" id="refreshBtn">🔄 Refresh</button>
+    </div>
+  </div>
+</nav>
+
+<div class="container">
+
+  <!-- KPI Overview -->
+  <section>
+    <div class="section-header">
+      <div class="section-title">📊 Today's Performance Snapshot</div>
+      <div class="section-sub">Updated automatically from WooCommerce</div>
+    </div>
+    <div class="kpi-grid" id="kpis"></div>
+  </section>
+
+  <!-- Pipeline -->
+  <section>
+    <div class="section-header">
+      <div class="section-title">📦 Order Status Pipeline</div>
+      <div class="section-sub">Click any card to filter orders below</div>
+    </div>
+    <div class="pipe-grid" id="pipeline"></div>
+  </section>
+
+  <!-- Top Cities & Products -->
+  <div class="cols">
+    <div>
+      <div class="section-header">
+        <div class="section-title">📍 Top Cities Today</div>
+      </div>
+      <div class="table-card scroll-wrap">
+        <table id="cities"><tbody></tbody></table>
+        <div class="empty-state" id="citiesEmpty" hidden><div class="ico">📍</div>No orders placed yet today.</div>
+      </div>
+    </div>
+
+    <div>
+      <div class="section-header">
+        <div class="section-title">🛍️ Top Products Selling Today</div>
+      </div>
+      <div class="table-card scroll-wrap">
+        <table id="products"><tbody></tbody></table>
+        <div class="empty-state" id="productsEmpty" hidden><div class="ico">🛍️</div>Nothing sold yet today.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- All Orders List -->
+  <section>
+    <div class="section-header">
+      <div class="section-title">📋 All Orders Today <span class="section-sub" id="orderCount" style="margin-left:6px"></span></div>
+      <button class="btn" id="resetFilterBtn" style="padding:4px 10px;font-size:12px;display:none;">Clear Filters</button>
+    </div>
+
+    <div class="controls-bar">
+      <div class="search-box">
+        <span class="icon">🔍</span>
+        <input id="search" type="search" placeholder="Search customer, city, order ID, product name, or payment…">
+      </div>
+      <select id="statusFilter">
+        <option value="">All Statuses</option>
+        <option value="pending">Pending</option>
+        <option value="processing">Processing</option>
+        <option value="on-hold">On Hold</option>
+        <option value="completed">Completed</option>
+        <option value="cancelled">Cancelled</option>
+        <option value="refunded">Refunded</option>
+        <option value="failed">Failed</option>
+      </select>
+      <select id="payFilter">
+        <option value="">All Payment Types</option>
+        <option value="cod">Cash on Delivery (COD)</option>
+        <option value="online">Prepaid / Online</option>
+      </select>
+    </div>
+
+    <div class="table-card scroll-wrap" style="margin-top:12px;">
+      <table>
+        <thead>
+          <tr>
+            <th>Time</th>
+            <th>Order</th>
+            <th>Customer</th>
+            <th>City</th>
+            <th>Items</th>
+            <th class="num">Amount</th>
+            <th>Payment</th>
+            <th>Status</th>
+            <th>Type</th>
+          </tr>
+        </thead>
+        <tbody id="orders"></tbody>
+      </table>
+      <div class="empty-state" id="ordersEmpty" hidden><div class="ico">🔍</div>No orders match your search or filter.</div>
+    </div>
+  </section>
+
+  <!-- Stock Alerts -->
+  <section>
+    <div class="section-header">
+      <div class="section-title">⚠️ Inventory Stock Status</div>
+    </div>
+    <div class="alert-card" id="stock"></div>
+  </section>
+
+  <!-- Meta Ads -->
+  <section>
+    <div class="section-header">
+      <div class="section-title">🎯 Meta Ads Intelligence</div>
+    </div>
+    <div class="alert-card" id="ads"></div>
+  </section>
+
+  <p class="footer-note">
+    🔒 <b>Privacy Notice:</b> This operations dashboard processes billing first names and destination cities only. Customer phone numbers, email addresses, and full street addresses never leave the store or reach the screen. Orders refresh automatically every 60 seconds.
+  </p>
+</div>
+
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+const KEY = (() => {
+  const k = new URLSearchParams(location.search).get("k");
+  try { if (k) localStorage.setItem("boardKey", k); return k || localStorage.getItem("boardKey") || ""; } catch (e) { return k || ""; }
+})();
+
+// Set current design selection in header
+const cookieDesign = (document.cookie.match(/(?:^|;\s*)design=([a-z]+)/) || [])[1] || "apple";
+if ($("designSelect")) {
+  $("designSelect").value = cookieDesign;
+  $("designSelect").addEventListener("change", e => {
+    document.cookie = "design=" + e.target.value + "; path=/; max-age=31536000; SameSite=Lax";
+    location.href = "/?design=" + e.target.value + (KEY ? "&k=" + encodeURIComponent(KEY) : "");
+  });
+}
+
+$("tvlink").href = "/?k=" + encodeURIComponent(KEY);
+$("refreshBtn").onclick = () => poll(true);
+
+const inr = v => Math.round(v || 0).toLocaleString("en-IN");
+const esc = t => String(t || "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const STATUS_LABEL = { pending: "Pending", processing: "Processing", "on-hold": "On hold", completed: "Completed", cancelled: "Cancelled", refunded: "Refunded", failed: "Failed" };
+let state = null;
+let activeStatusFilter = "";
+
+function kpi(k, v, d, bad, good, icon) {
+  return `<div class="kpi-card${bad ? " bad" : ""}${good ? " good" : ""}">
+    <div class="kpi-head"><span class="kpi-k">${k}</span><span class="kpi-icon">${icon || ""}</span></div>
+    <div class="kpi-v">${v}</div>
+    ${d ? `<div class="kpi-d">${d}</div>` : ""}
+  </div>`;
+}
+
+function render(s) {
+  state = s;
+  if (s.store_name) $("store").textContent = s.store_name + " · Operations Command Center";
+  const isPast = Boolean(s.is_past_date);
+  $("date").textContent = isPast
+    ? `Historical Date: ${s.selected_date}`
+    : new Date().toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long" });
+  $("updated").textContent = "Updated " + new Date().toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit", second: "2-digit" });
+
+  const rj = s.rejected || { cancelled: { orders: 0, amount: 0 }, refunded: { orders: 0, amount: 0 }, failed: { orders: 0, amount: 0 } };
+  const badN = rj.cancelled.orders + rj.refunded.orders + rj.failed.orders;
+  const badAmt = rj.cancelled.amount + rj.refunded.amount + rj.failed.amount;
+  const p = s.payment || { cod: { orders: 0, revenue: 0 }, prepaid: { orders: 0, revenue: 0 } };
+  const c = s.customers || { new: 0, returning: 0, guest: 0 };
+  const totalRev = s.revenue || 0;
+  const vsPct = s.vs_yesterday_pct;
+
+  let vsText = "Yesterday ₹" + inr(s.yesterday_total);
+  if (vsPct !== null && vsPct !== undefined) {
+    vsText = `${vsPct >= 0 ? "▲" : "▼"} ${Math.abs(vsPct)}% ${vsPct >= 0 ? "ahead of" : "behind"} yesterday by now`;
+  }
+
+  const salesTitle = isPast ? `Sales on ${s.selected_date}` : "Sales Today";
+  const salesSub = isPast ? `${s.orders || 0} orders on this date` : `${s.orders || 0} orders today`;
+
+  $("kpis").innerHTML =
+    kpi(salesTitle, "₹" + inr(totalRev), salesSub, false, totalRev > 0, "💰") +
+    kpi("Per Order (AOV)", "₹" + inr(s.aov), vsText, vsPct !== null && vsPct < 0, vsPct !== null && vsPct > 0, "🏷️") +
+    kpi("Cash On Delivery", p.cod.orders + " orders", "₹" + inr(p.cod.revenue), false, false, "💵") +
+    kpi("Prepaid / Online", p.prepaid.orders + " orders", "₹" + inr(p.prepaid.revenue), false, false, "💳") +
+    kpi("New Customers", c.new, `${c.returning} returning · ${c.guest || 0} guest`, false, c.new > 0, "🌱") +
+    kpi("Unfulfilled / Failed", badN + " orders", badAmt ? "₹" + inr(badAmt) + " lost" : "None today", badN > 0, badN === 0, "❌") +
+    kpi("Yesterday Total", "₹" + inr(s.yesterday_total), s.projection ? "Heading for ~₹" + inr(s.projection) : "Full day sales", false, false, "📈") +
+    kpi("Month Best Day", s.month_best ? "₹" + inr(s.month_best.revenue) : "-", s.month_best ? s.month_best.date : "", false, false, "🏆");
+
+  const st = s.statuses || {};
+  $("pipeline").innerHTML = ["pending", "processing", "on-hold", "completed", "cancelled", "refunded", "failed"].map(k => {
+    const count = (st[k] || { orders: 0 }).orders;
+    const amt = (st[k] || { amount: 0 }).amount;
+    const isActive = activeStatusFilter === k ? " active" : "";
+    return `<div class="pipe-card ${k}${isActive}" onclick="filterByPipeline('${k}')">
+      <div class="k">${STATUS_LABEL[k]}</div>
+      <div class="v">${count}</div>
+      <div class="d">${amt ? "₹" + inr(amt) : "₹0"}</div>
+    </div>`;
+  }).join("");
+
+  const cs = s.cities || [];
+  $("citiesEmpty").hidden = cs.length > 0;
+  $("cities").innerHTML = "<thead><tr><th>#</th><th>City</th><th class='num'>Orders</th><th class='num'>Revenue</th></tr></thead><tbody>" +
+    cs.slice(0, 10).map((x, idx) => {
+      const rankCls = idx === 0 ? " top1" : idx === 1 ? " top2" : idx === 2 ? " top3" : "";
+      return `<tr><td><span class="rank${rankCls}">${idx + 1}</span></td><td><b>${esc(x.city)}</b></td><td class="num">${x.orders}</td><td class="num font-bold">₹${inr(x.revenue)}</td></tr>`;
+    }).join("") + "</tbody>";
+
+  const ps = s.product_sales || [];
+  $("productsEmpty").hidden = ps.length > 0;
+  $("products").innerHTML = "<thead><tr><th>#</th><th>Product</th><th class='num'>Units</th><th class='num'>Revenue</th></tr></thead><tbody>" +
+    ps.slice(0, 10).map((x, idx) => {
+      const rankCls = idx === 0 ? " top1" : idx === 1 ? " top2" : idx === 2 ? " top3" : "";
+      return `<tr><td><span class="rank${rankCls}">${idx + 1}</span></td><td><b>${esc(x.name)}</b></td><td class="num">${x.qty}</td><td class="num font-bold">₹${inr(x.revenue)}</td></tr>`;
+    }).join("") + "</tbody>";
+
+  renderOrders();
+
+  const stock = s.low_stock;
+  $("stock").innerHTML = stock === null || stock === undefined
+    ? `<span style="color:var(--muted)">Stock monitoring is unavailable or requires inventory read permissions on WooCommerce API.</span>`
+    : stock.length
+      ? `<div class="stock-warn">⚠️ ${stock.length} product${stock.length > 1 ? "s are" : " is"} running low on inventory:</div>
+         <table><thead><tr><th>Product Name</th><th class='num'>Units Left</th></tr></thead><tbody>` +
+        stock.map(x => `<tr><td><b>${esc(x.name)}</b></td><td class="num"><span class="badge ${x.stock <= 0 ? 'cancelled' : 'processing'}">${x.stock} in stock</span></td></tr>`).join("") + "</tbody></table>"
+      : `<div class="stock-healthy"><span>✅</span> All inventory is healthy. No items are currently at or below low stock thresholds.</div>`;
+
+  const ads = $("ads");
+  if (!s.meta_on) {
+    ads.innerHTML = `<span style="color:var(--muted)">Meta ad intelligence is not connected yet. Add META_TOKEN and META_AD_ACCOUNT to view real-time ROAS and campaign spend here.</span>`;
+  } else if (s.meta_error) {
+    ads.innerHTML = `<span style="color:var(--bad)">⚠️ Meta connection issue: ${esc(s.meta_error)}</span>`;
+  } else if (!s.spend) {
+    ads.innerHTML = `<span style="color:var(--muted)">No ad spend recorded yet today on Meta.</span>`;
+  } else {
+    const trueCpp = s.orders ? Math.round(s.spend / s.orders) : 0;
+    ads.innerHTML = `<table><thead><tr><th>Campaign</th><th class='num'>Ad Spend</th><th class='num'>Meta Purchases</th><th class='num'>Meta ROAS</th></tr></thead><tbody>` +
+      (s.campaigns || []).map(x => `<tr><td><b>${esc(x.short)}</b></td><td class="num">₹${inr(x.spend)}</td><td class="num">${x.purchases}</td><td class="num font-bold">${x.roas ? x.roas.toFixed(2) + "x" : "-"}</td></tr>`).join("") + "</tbody></table>" +
+      `<p style="margin-top:14px;font-size:13px;line-height:1.6;color:var(--muted);">Total Ad Spend <b>₹${inr(s.spend)}</b> · Real Return <b>${s.roas_real ? s.roas_real.toFixed(2) + "x" : "-"}</b> (real store revenue ÷ ad spend) · Meta Pixel ROAS <b>${s.roas_meta ? s.roas_meta.toFixed(2) + "x" : "-"}</b> · <b>True Ad Cost per Store Order: ₹${inr(trueCpp)}</b>.` +
+      (s.meta_age_min !== null && s.meta_age_min > 40 ? ` <span style="color:var(--bad);font-weight:600;">(Ad numbers are ${s.meta_age_min}m old, reconnecting)</span>` : "") + "</p>";
+  }
+}
+
+window.filterByPipeline = function(statusKey) {
+  if (activeStatusFilter === statusKey) {
+    activeStatusFilter = "";
+    $("statusFilter").value = "";
+  } else {
+    activeStatusFilter = statusKey;
+    $("statusFilter").value = statusKey;
+  }
+  document.querySelectorAll(".pipe-card").forEach(el => {
+    el.classList.toggle("active", el.classList.contains(activeStatusFilter));
+  });
+  renderOrders();
+};
+
+function renderOrders() {
+  if (!state) return;
+  const q = $("search").value.trim().toLowerCase();
+  const fStatus = $("statusFilter").value || activeStatusFilter;
+  const fPay = $("payFilter").value;
+
+  const allOrders = state.orders_today || [];
+  const filtered = [...allOrders].reverse().filter(o => {
+    if (fStatus && o.status !== fStatus) return false;
+    if (fPay) {
+      const isCod = /cod|cash\s*on\s*delivery/i.test(o.pay || "");
+      if (fPay === "cod" && !isCod) return false;
+      if (fPay === "online" && isCod) return false;
+    }
+    if (!q) return true;
+    const hay = [o.name, o.first, o.city, o.pay, o.status, ...(o.items || []).map(i => i.name)].join(" ").toLowerCase();
+    return hay.includes(q);
+  });
+
+  $("orderCount").textContent = `(${filtered.length} of ${allOrders.length})`;
+  $("ordersEmpty").hidden = filtered.length > 0;
+  $("resetFilterBtn").style.display = (q || fStatus || fPay) ? "inline-flex" : "none";
+
+  $("orders").innerHTML = filtered.map(o => {
+    const items = (o.items || []).map(i => esc(i.name) + (i.qty > 1 ? " ×" + i.qty : "")).join(" + ");
+    const cust = o.new ? `<span class="badge new">🌱 New</span>` : o.guest ? `<span class="badge ret">Guest</span>` : `<span class="badge ret">Returning</span>`;
+    const isCod = /cod|cash\s*on\s*delivery/i.test(o.pay || "");
+    const payBadge = isCod ? `<span class="badge pay" style="border-color:#f59e0b;color:#b45309;">💵 COD</span>` : `<span class="badge pay" style="border-color:#3b82f6;color:#1d4ed8;">💳 Prepaid</span>`;
+    return `<tr>
+      <td class="order-time">${esc(o.at)}</td>
+      <td class="order-id">${esc(o.name)}</td>
+      <td><b>${esc(o.first || "Customer")}</b></td>
+      <td>${esc(o.city || "–")}</td>
+      <td style="max-width:320px;white-space:normal;">${items || "–"}</td>
+      <td class="num font-bold">₹${inr(o.amount)}</td>
+      <td>${payBadge}</td>
+      <td><span class="badge ${esc(o.status || "")}">${STATUS_LABEL[o.status] || esc(o.status || "–")}</span></td>
+      <td>${cust}</td>
+    </tr>`;
+  }).join("");
+}
+
+let ac = null;
+function audio() {
+  if (!ac) ac = new (window.AudioContext || window.webkitAudioContext)();
+  return ac;
+}
+let opsChimeBuffer = null;
+let opsAudioElement = null;
+try {
+  opsAudioElement = new Audio("/order-chime.mp3");
+  fetch("/order-chime.mp3")
+    .then(r => r.arrayBuffer())
+    .then(b => audio().decodeAudioData(b))
+    .then(d => { opsChimeBuffer = d; })
+    .catch(() => {});
+} catch (e) {}
+
+function chime(tier = 1) {
+  try {
+    const a = audio();
+    if (a && a.state === "suspended") a.resume();
+    if (opsChimeBuffer && a) {
+      const src = a.createBufferSource();
+      src.buffer = opsChimeBuffer;
+      src.connect(a.destination);
+      src.start(0);
+      return;
+    }
+    if (opsAudioElement) {
+      const clone = opsAudioElement.cloneNode();
+      clone.currentTime = 0;
+      clone.play().catch(() => {});
+      return;
+    }
+  } catch (e) {}
+}
+
+let curCalYear = new Date().getFullYear();
+let curCalMonth = new Date().getMonth();
+let curCalSort = "orders";
+
+function closeBestDaysCalendar() {
+  const modal = document.getElementById("best-days-modal");
+  if (modal) modal.classList.remove("open");
+}
+
+function openBestDaysCalendar(onSelectDate) {
+  const handler = onSelectDate || (d => {
+    selectedDate = d;
+    if ($("datePicker")) $("datePicker").value = d;
+    if ($("liveTodayBtn")) $("liveTodayBtn").style.display = "inline-flex";
+    poll(true);
+  });
+
+  let modal = document.getElementById("best-days-modal");
+  if (!modal) {
+    modal = document.createElement("div");
+    modal.id = "best-days-modal";
+    modal.innerHTML = `
+      <style>
+        #best-days-modal {
+          position: fixed; inset: 0; z-index: 100000;
+          background: rgba(15, 23, 42, 0.78); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+          display: flex; align-items: center; justify-content: center; padding: 20px;
+          opacity: 0; pointer-events: none; transition: opacity 0.25s ease;
+          font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, sans-serif; color: #0f172a;
+        }
+        #best-days-modal.open { opacity: 1; pointer-events: auto; }
+        .bdm-box {
+          background: #ffffff; width: 100%; max-width: 940px; max-height: 90vh; overflow-y: auto;
+          border-radius: 20px; box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.45);
+          display: flex; flex-direction: column; animation: bdmSlide .28s cubic-bezier(.16,1,.3,1);
+        }
+        @keyframes bdmSlide { from { transform: translateY(20px) scale(0.97); } to { transform: translateY(0) scale(1); } }
+        .bdm-header {
+          padding: 18px 24px; border-bottom: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: space-between;
+          background: #f8fafc; border-radius: 20px 20px 0 0;
+        }
+        .bdm-title { font-size: 19px; font-weight: 800; color: #0f172a; display: flex; align-items: center; gap: 10px; }
+        .bdm-close {
+          width: 32px; height: 32px; border-radius: 50%; border: 1px solid #cbd5e1; background: #fff; cursor: pointer;
+          font-size: 15px; display: flex; align-items: center; justify-content: center; color: #64748b; transition: all .15s ease;
+        }
+        .bdm-close:hover { background: #fee2e2; border-color: #f87171; color: #dc2626; }
+        .bdm-content { padding: 22px 24px; display: flex; flex-direction: column; gap: 18px; }
+        .bdm-top-bar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+        .bdm-sort-toggle { display: inline-flex; background: #f1f5f9; border-radius: 999px; padding: 3px; border: 1px solid #e2e8f0; }
+        .bdm-sort-btn {
+          border: none; background: transparent; padding: 6px 14px; border-radius: 999px;
+          font-size: 12px; font-weight: 700; color: #64748b; cursor: pointer; transition: all .15s ease;
+        }
+        .bdm-sort-btn.active { background: #2563eb; color: #ffffff; box-shadow: 0 2px 6px rgba(37,99,235,0.25); }
+        .bdm-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; }
+        .bdm-card {
+          background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 14px; padding: 14px 16px;
+          cursor: pointer; transition: all .18s ease; position: relative; overflow: hidden;
+        }
+        .bdm-card:hover {
+          background: #eff6ff; border-color: #93c5fd; transform: translateY(-2px);
+          box-shadow: 0 6px 16px rgba(37,99,235,0.12);
+        }
+        .bdm-card.rank-1 { border-left: 5px solid #f59e0b; background: #fffdf5; }
+        .bdm-card.rank-2 { border-left: 5px solid #94a3b8; background: #f8fafc; }
+        .bdm-card.rank-3 { border-left: 5px solid #d97706; background: #fffaf0; }
+        .bdm-card .rank-badge { position: absolute; top: 10px; right: 12px; font-size: 20px; }
+        .bdm-card .c-date { font-size: 13px; font-weight: 700; color: #64748b; }
+        .bdm-card .c-main { font-size: 22px; font-weight: 800; color: #0f172a; margin-top: 4px; letter-spacing: -.5px; }
+        .bdm-card .c-sub { font-size: 12px; color: #64748b; font-weight: 600; margin-top: 2px; }
+        .bdm-cal-header { display: flex; align-items: center; justify-content: space-between; padding: 8px 4px; }
+        .bdm-month-title { font-size: 16px; font-weight: 800; color: #1e293b; }
+        .bdm-nav-btn {
+          background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 8px; padding: 5px 12px;
+          font-size: 12px; font-weight: 600; cursor: pointer; color: #334155; transition: background .15s;
+        }
+        .bdm-nav-btn:hover { background: #e2e8f0; }
+        .bdm-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+        .bdm-day-head { text-align: center; font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase; padding: 6px 0; }
+        .bdm-day-cell {
+          aspect-ratio: 1 / 0.95; min-height: 68px; border: 1px solid #e2e8f0; border-radius: 10px; padding: 6px 8px;
+          display: flex; flex-direction: column; justify-content: space-between; background: #ffffff;
+          cursor: pointer; transition: all .15s ease; position: relative;
+        }
+        .bdm-day-cell.empty { background: #fafafa; border-color: #f1f5f9; cursor: default; }
+        .bdm-day-cell:not(.empty):hover { border-color: #2563eb; box-shadow: 0 4px 12px rgba(37,99,235,0.18); transform: scale(1.02); z-index: 2; }
+        .bdm-day-cell.is-today { border: 2px solid #2563eb; background: #eff6ff; }
+        .bdm-day-cell.is-selected { border: 2px solid #16a34a; background: #f0fdf4; }
+        .bdm-day-num { font-size: 13px; font-weight: 700; color: #1e293b; display: flex; align-items: center; justify-content: space-between; }
+        .bdm-day-orders {
+          font-size: 11px; font-weight: 800; padding: 2px 6px; border-radius: 6px; background: #f1f5f9;
+          color: #0f172a; display: inline-block; margin-top: 2px; width: fit-content;
+        }
+        .bdm-day-orders.high { background: #dbeafe; color: #1d4ed8; }
+        .bdm-day-orders.top { background: #fef3c7; color: #b45309; }
+        .bdm-day-rev { font-size: 11px; font-weight: 600; color: #64748b; font-variant-numeric: tabular-nums; }
+      </style>
+      <div class="bdm-box">
+        <div class="bdm-header">
+          <div class="bdm-title"><span>🏆 Best Days as per Orders & Order History</span></div>
+          <button class="bdm-close" id="bdm-close-btn" title="Close (Esc)">✕</button>
+        </div>
+        <div class="bdm-content">
+          <div class="bdm-top-bar">
+            <div>
+              <span style="font-size:12px;color:#64748b;font-weight:600;margin-right:6px;">Rank days by:</span>
+              <div class="bdm-sort-toggle">
+                <button class="bdm-sort-btn active" id="bdm-by-orders">📦 Highest Orders</button>
+                <button class="bdm-sort-btn" id="bdm-by-rev">💰 Highest Sales</button>
+              </div>
+            </div>
+            <button class="btn btn-primary" id="bdm-today-btn" style="padding:6px 14px;font-size:12px;background:#16a34a;border:none;border-radius:999px;color:#fff;font-weight:700;cursor:pointer;">🔴 Live Today</button>
+          </div>
+          <div>
+            <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#64748b;margin-bottom:8px;">🌟 Best Days Leaderboard</div>
+            <div class="bdm-cards" id="bdm-leaderboard"></div>
+          </div>
+          <div style="border-top:1px solid #e2e8f0;padding-top:14px;">
+            <div class="bdm-cal-header">
+              <button class="bdm-nav-btn" id="bdm-prev-month">◀ Prev Month</button>
+              <div class="bdm-month-title" id="bdm-month-title"></div>
+              <button class="bdm-nav-btn" id="bdm-next-month">Next Month ▶</button>
+            </div>
+            <div class="bdm-grid" id="bdm-grid-head">
+              <div class="bdm-day-head">Sun</div><div class="bdm-day-head">Mon</div><div class="bdm-day-head">Tue</div>
+              <div class="bdm-day-head">Wed</div><div class="bdm-day-head">Thu</div><div class="bdm-day-head">Fri</div><div class="bdm-day-head">Sat</div>
+            </div>
+            <div class="bdm-grid" id="bdm-grid-cells" style="margin-top:6px;"></div>
+          </div>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+
+    modal.addEventListener("click", e => { if (e.target === modal) closeBestDaysCalendar(); });
+    document.getElementById("bdm-close-btn").addEventListener("click", closeBestDaysCalendar);
+    document.addEventListener("keydown", e => { if (e.key === "Escape" && modal.classList.contains("open")) closeBestDaysCalendar(); });
+
+    document.getElementById("bdm-by-orders").addEventListener("click", () => {
+      curCalSort = "orders";
+      document.getElementById("bdm-by-orders").classList.add("active");
+      document.getElementById("bdm-by-rev").classList.remove("active");
+      renderCalendarModalContent(handler);
+    });
+
+    document.getElementById("bdm-by-rev").addEventListener("click", () => {
+      curCalSort = "revenue";
+      document.getElementById("bdm-by-rev").classList.add("active");
+      document.getElementById("bdm-by-orders").classList.remove("active");
+      renderCalendarModalContent(handler);
+    });
+
+    document.getElementById("bdm-prev-month").addEventListener("click", () => {
+      curCalMonth--;
+      if (curCalMonth < 0) { curCalMonth = 11; curCalYear--; }
+      renderCalendarModalContent(handler);
+    });
+
+    document.getElementById("bdm-next-month").addEventListener("click", () => {
+      curCalMonth++;
+      if (curCalMonth > 11) { curCalMonth = 0; curCalYear++; }
+      renderCalendarModalContent(handler);
+    });
+
+    document.getElementById("bdm-today-btn").addEventListener("click", () => {
+      closeBestDaysCalendar();
+      resetToLive();
+    });
+  }
+
+  modal.classList.add("open");
+  renderCalendarModalContent(handler);
+}
+
+function renderCalendarModalContent(onSelectDate) {
+  const s = state || {};
+  let list = s.daily_history || [];
+
+  if (!list.length) {
+    if (s.selected_date) list.push({ date: s.selected_date, orders: s.orders || 0, revenue: s.revenue || 0 });
+    if (s.yesterday_total) {
+      const yDate = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+      list.push({ date: yDate, orders: Math.round(s.yesterday_total / (s.aov || 440)), revenue: s.yesterday_total });
+    }
+  }
+
+  const byDate = {};
+  list.forEach(d => { byDate[d.date] = d; });
+
+  const sortedList = [...list].sort((a, b) => {
+    return curCalSort === "orders" ? (b.orders - a.orders || b.revenue - a.revenue) : (b.revenue - a.revenue || b.orders - a.orders);
+  });
+
+  const ranks = {};
+  sortedList.forEach((d, idx) => { ranks[d.date] = idx + 1; });
+
+  const top3 = sortedList.slice(0, 3);
+  const lb = document.getElementById("bdm-leaderboard");
+  if (lb) {
+    lb.innerHTML = top3.map((d, i) => {
+      const rankNum = i + 1;
+      const medal = rankNum === 1 ? "🥇" : rankNum === 2 ? "🥈" : "🥉";
+      const dateFmt = new Date(d.date + "T12:00:00Z").toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" });
+      const mainVal = curCalSort === "orders" ? `${d.orders} orders` : `₹${inr(d.revenue)}`;
+      const subVal = curCalSort === "orders" ? `₹${inr(d.revenue)} revenue` : `${d.orders} orders`;
+      return `
+        <div class="bdm-card rank-${rankNum}" data-date="${d.date}">
+          <span class="rank-badge">${medal}</span>
+          <div class="c-date">Rank #${rankNum} · ${dateFmt}</div>
+          <div class="c-main">${mainVal}</div>
+          <div class="c-sub">${subVal}</div>
+        </div>
+      `;
+    }).join("");
+
+    lb.querySelectorAll(".bdm-card").forEach(el => {
+      el.addEventListener("click", () => {
+        const dt = el.dataset.date;
+        closeBestDaysCalendar();
+        onSelectDate(dt);
+        chime(2);
+      });
+    });
+  }
+
+  const mTitle = document.getElementById("bdm-month-title");
+  if (mTitle) {
+    mTitle.textContent = new Date(curCalYear, curCalMonth, 1).toLocaleDateString("en-IN", { month: "long", year: "numeric" });
+  }
+
+  const gridCells = document.getElementById("bdm-grid-cells");
+  if (gridCells) {
+    const firstDay = new Date(curCalYear, curCalMonth, 1).getDay();
+    const totalDays = new Date(curCalYear, curCalMonth + 1, 0).getDate();
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const selectedDateStr = selectedDate || null;
+
+    let html = "";
+    for (let i = 0; i < firstDay; i++) {
+      html += `<div class="bdm-day-cell empty"></div>`;
+    }
+
+    for (let day = 1; day <= totalDays; day++) {
+      const dStr = `${curCalYear}-${String(curCalMonth + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+      const item = byDate[dStr];
+      const rank = ranks[dStr];
+      const isToday = dStr === todayStr;
+      const isSel = dStr === selectedDateStr;
+      const rankIcon = rank === 1 ? "🥇" : rank === 2 ? "🥈" : rank === 3 ? "🥉" : "";
+
+      let ordersHtml = "";
+      let revHtml = "";
+      if (item && item.orders > 0) {
+        const isTop = rank && rank <= 3;
+        const isHigh = rank && rank <= 7;
+        ordersHtml = `<div class="bdm-day-orders ${isTop ? 'top' : isHigh ? 'high' : ''}">${item.orders} orders</div>`;
+        revHtml = `<div class="bdm-day-rev">₹${inr(item.revenue)}</div>`;
+      } else {
+        ordersHtml = `<div style="font-size:11px;color:#94a3b8;">–</div>`;
+      }
+
+      html += `
+        <div class="bdm-day-cell ${isToday ? 'is-today' : ''} ${isSel ? 'is-selected' : ''}" data-date="${dStr}">
+          <div class="bdm-day-num">
+            <span>${day} ${isToday ? '<small style="color:#2563eb;font-size:10px;">TODAY</small>' : ''}</span>
+            <span>${rankIcon}</span>
+          </div>
+          ${ordersHtml}
+          ${revHtml}
+        </div>
+      `;
+    }
+
+    gridCells.innerHTML = html;
+
+    gridCells.querySelectorAll(".bdm-day-cell:not(.empty)").forEach(cell => {
+      cell.addEventListener("click", () => {
+        const dt = cell.dataset.date;
+        closeBestDaysCalendar();
+        onSelectDate(dt);
+        chime(1);
+      });
+    });
+  }
+}
+
+if ($("bestDaysBtn")) {
+  $("bestDaysBtn").addEventListener("click", () => openBestDaysCalendar());
+}
+
+let selectedDate = null;
+let pollTimer = null;
+const todayISO = new Date().toISOString().slice(0, 10);
+if ($("datePicker")) {
+  $("datePicker").max = todayISO;
+  $("datePicker").addEventListener("change", e => {
+    const val = e.target.value;
+    if (!val || val === todayISO) {
+      resetToLive();
+    } else {
+      selectedDate = val;
+      $("liveTodayBtn").style.display = "inline-flex";
+      poll(true);
+    }
+  });
+}
+
+function resetToLive() {
+  selectedDate = null;
+  if ($("datePicker")) $("datePicker").value = "";
+  if ($("liveTodayBtn")) $("liveTodayBtn").style.display = "none";
+  poll(true);
+}
+if ($("liveTodayBtn")) $("liveTodayBtn").onclick = resetToLive;
+
+$("resetFilterBtn").onclick = () => {
+  $("search").value = "";
+  $("statusFilter").value = "";
+  $("payFilter").value = "";
+  activeStatusFilter = "";
+  document.querySelectorAll(".pipe-card").forEach(el => el.classList.remove("active"));
+  renderOrders();
+};
+
+async function poll(manual) {
+  if (pollTimer) { clearTimeout(pollTimer); pollTimer = null; }
+  try {
+    if (manual) $("updated").textContent = "Refreshing…";
+    const endpoint = selectedDate
+      ? `/api/state?full=1&date=${encodeURIComponent(selectedDate)}&k=${encodeURIComponent(KEY)}`
+      : `/api/state?full=1&k=${encodeURIComponent(KEY)}`;
+    const r = await fetch(endpoint, { cache: "no-store" });
+    const s = await r.json();
+    if (!r.ok) throw new Error(s.error || "HTTP " + r.status);
+    $("live").classList.remove("off");
+    $("livetxt").textContent = selectedDate ? `Archive (${selectedDate})` : "Live Sync";
+    render(s);
+  } catch (e) {
+    $("live").classList.add("off");
+    $("livetxt").textContent = "Reconnecting";
+  }
+  if (!manual) pollTimer = setTimeout(poll, selectedDate ? 60000 : 45000);
+}
+
+$("search").addEventListener("input", renderOrders);
+$("statusFilter").addEventListener("change", e => {
+  activeStatusFilter = e.target.value;
+  document.querySelectorAll(".pipe-card").forEach(el => el.classList.toggle("active", el.classList.contains(activeStatusFilter)));
+  renderOrders();
+});
+$("payFilter").addEventListener("change", renderOrders);
+
+poll();
+</script>
+</body>
+</html>

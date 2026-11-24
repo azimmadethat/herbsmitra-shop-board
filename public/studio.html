@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>Shop Board · Studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* A well-made Mac app: one window on a soft wallpaper, translucent sidebar, system blue. */
+:root { --ink: #1d1d1f; --dim: #6e6e73; --faint: #a1a1a6; --line: rgba(0,0,0,.08); --blue: #0a84ff; --green: #30a46c; --red: #e5484d; --orange: #f5a524; --card: #fff; --win: #f5f5f7; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 100%; height: 100%; overflow: hidden; }
+body { font-family: "Inter", -apple-system, system-ui, sans-serif; color: var(--ink); background: #c9d6ea; -webkit-font-smoothing: antialiased; font-feature-settings: "tnum" 1, "cv11" 1; }
+.wall { position: fixed; inset: 0; background:
+  radial-gradient(50% 60% at 15% 20%, #ffd6c2 0%, transparent 70%),
+  radial-gradient(55% 60% at 85% 15%, #c7d8ff 0%, transparent 70%),
+  radial-gradient(60% 60% at 70% 90%, #d9c8ff 0%, transparent 70%),
+  radial-gradient(50% 50% at 20% 95%, #bfe8dc 0%, transparent 70%), #e8e4f0; animation: drift 40s ease-in-out infinite alternate; }
+@keyframes drift { to { filter: hue-rotate(25deg); } }
+
+#stage { position: absolute; left: 50%; top: 50%; width: 1920px; height: 1080px; transform: translate(-50%,-50%); }
+.win { position: absolute; left: 56px; top: 44px; right: 56px; bottom: 44px; border-radius: 26px; background: var(--win); overflow: hidden;
+  box-shadow: 0 0 0 1px rgba(0,0,0,.12), 0 40px 90px -20px rgba(40,40,80,.45), 0 10px 30px -10px rgba(0,0,0,.2); display: grid; grid-template-columns: 400px 1fr; }
+
+/* sidebar */
+.side { background: rgba(236,236,240,.72); backdrop-filter: blur(30px); border-right: 1px solid var(--line); padding: 26px 22px 22px; display: flex; flex-direction: column; min-height: 0; }
+.lights { display: flex; gap: 10px; margin: 0 0 30px 6px; }
+.lights i { width: 15px; height: 15px; border-radius: 50%; background: #ff5f57; box-shadow: inset 0 0 0 .5px rgba(0,0,0,.15); }
+.lights i:nth-child(2) { background: #febc2e; } .lights i:nth-child(3) { background: #28c840; }
+.sec { font-size: 15px; font-weight: 600; color: var(--faint); letter-spacing: .3px; margin: 22px 12px 8px; }
+.nav { display: flex; align-items: center; gap: 12px; padding: 11px 12px; border-radius: 10px; font-size: 21px; font-weight: 500; }
+.nav.sel { background: rgba(0,0,0,.07); }
+.nav svg { width: 22px; height: 22px; color: var(--blue); flex: none; }
+#camps { display: flex; flex-direction: column; gap: 2px; }
+.cr { display: grid; grid-template-columns: 12px 1fr auto; gap: 12px; align-items: center; padding: 12px 12px; border-radius: 10px; font-size: 20px; }
+.cr i { width: 10px; height: 10px; border-radius: 50%; }
+.cr .n { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 500; }
+.cr .v { font-weight: 600; }
+.cr small { grid-column: 2 / -1; font-size: 15px; color: var(--dim); margin-top: -8px; }
+#prods { display: flex; flex-direction: column; }
+.pr { display: flex; justify-content: space-between; padding: 10px 12px; font-size: 20px; }
+.pr span:last-child { color: var(--dim); }
+#mic { margin-top: auto; display: flex; align-items: center; gap: 14px; border: 0; border-radius: 14px; padding: 16px 18px; font: 600 20px "Inter", sans-serif; color: #fff;
+  background: linear-gradient(135deg, #5e5ce6, #0a84ff 55%, #64d2ff); box-shadow: 0 8px 20px -8px rgba(10,132,255,.6); cursor: pointer; }
+#mic i { font-style: normal; font-size: 22px; }
+#mic.listening { background: linear-gradient(135deg, #ff375f, #ff9f0a); }
+
+/* main */
+.main { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+.bar { height: 76px; display: flex; align-items: center; gap: 18px; padding: 0 36px; border-bottom: 1px solid var(--line); background: rgba(255,255,255,.6); }
+.bar h1 { font-size: 24px; font-weight: 600; }
+.seg { display: flex; background: rgba(0,0,0,.06); border-radius: 9px; padding: 3px; margin-left: 18px; }
+.seg span { font-size: 17px; font-weight: 500; padding: 6px 18px; border-radius: 7px; color: var(--dim); }
+.seg span.on { background: #fff; color: var(--ink); box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+#clock { margin-left: auto; font-size: 19px; color: var(--dim); }
+#clock b { color: var(--ink); font-weight: 600; }
+.live { display: flex; align-items: center; gap: 8px; font-size: 17px; color: var(--dim); }
+.live .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--green); box-shadow: 0 0 0 0 rgba(48,164,108,.5); animation: ping 2s infinite; }
+@keyframes ping { 70% { box-shadow: 0 0 0 9px rgba(48,164,108,0); } }
+
+.body { flex: 1; padding: 30px 36px 32px; display: grid; grid-template-columns: 1fr 1fr 1fr; grid-template-rows: auto 1fr 290px; gap: 22px; min-height: 0; }
+.hero { grid-column: 1 / -1; display: flex; align-items: flex-end; gap: 40px; }
+.hero .k { font-size: 20px; font-weight: 500; color: var(--dim); }
+#rev { font-size: 132px; font-weight: 600; letter-spacing: -5px; line-height: 1; margin-top: 6px; }
+#rev .rs { font-size: 84px; color: var(--faint); font-weight: 500; letter-spacing: 0; margin-right: 6px; }
+#rev.bump { animation: bump .7s cubic-bezier(.2,1.4,.4,1); }
+@keyframes bump { 40% { color: var(--blue); } }
+.stats { display: flex; gap: 14px; margin-bottom: 14px; flex-wrap: wrap; }
+.stat { background: var(--card); border-radius: 14px; padding: 12px 20px; box-shadow: 0 0 0 1px var(--line); min-width: 150px; }
+.stat b { display: block; font-size: 34px; font-weight: 600; letter-spacing: -.5px; }
+.stat small { font-size: 16px; color: var(--dim); font-weight: 500; }
+#vsy { background: var(--card); border-radius: 14px; padding: 12px 20px; box-shadow: 0 0 0 1px var(--line); font-size: 34px; font-weight: 600; color: var(--green); }
+#vsy.down { color: var(--red); }
+#vsy small { display: block; font-size: 16px; color: var(--dim) !important; font-weight: 500; opacity: 1 !important; }
+#headline { font-size: 20px; color: var(--dim); margin-left: auto; margin-bottom: 18px; max-width: 520px; text-align: right; line-height: 1.35; }
+#headline::before { content: "Today's note"; display: block; font-size: 14px; font-weight: 600; color: var(--faint); letter-spacing: .4px; text-transform: uppercase; }
+
+.card { background: var(--card); border-radius: 18px; box-shadow: 0 0 0 1px var(--line), 0 2px 6px rgba(0,0,0,.03); padding: 22px 26px; min-height: 0; position: relative; }
+.card h3 { font-size: 17px; font-weight: 600; color: var(--dim); display: flex; justify-content: space-between; }
+.chart { grid-column: 1 / -1; display: flex; flex-direction: column; }
+.legend { display: flex; gap: 22px; font-size: 16px; color: var(--dim); font-weight: 500; }
+.legend i { display: inline-block; width: 18px; height: 3px; border-radius: 2px; background: var(--blue); vertical-align: middle; margin-right: 8px; }
+.legend i.y { background: none; border-top: 3px dashed #c7c7cc; height: 0; }
+#chart { flex: 1; min-height: 0; height: 0; width: 100%; margin-top: 10px; overflow: visible; }
+.ax { font-size: 14px; fill: var(--faint); font-family: Inter; }
+
+.ads #roas { font-size: 60px; font-weight: 600; letter-spacing: -2px; margin-top: 4px; line-height: 1.05; }
+.ads #roas small { font-size: 36px; color: var(--faint); }
+.gauge { height: 10px; border-radius: 5px; background: #ececf0; margin: 10px 0 8px; position: relative; overflow: visible; }
+.gauge b { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 5px; background: var(--green); transition: width 1s; }
+.gauge em { position: absolute; top: -6px; bottom: -6px; width: 3px; border-radius: 2px; background: var(--ink); }
+#roasnote { font-size: 16px; color: var(--dim); }
+.ads .row { display: flex; justify-content: space-between; font-size: 19px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); }
+.ads .row span { color: var(--dim); }
+
+#chips { display: flex; flex-direction: column; margin-top: 8px; }
+.chip { display: grid; grid-template-columns: 70px 1fr auto; gap: 10px; align-items: baseline; padding: 10px 0; border-bottom: 1px solid var(--line); font-size: 19px; animation: rowin .6s; }
+.chip:last-child { border-bottom: 0; }
+.chip .t { color: var(--faint); font-size: 16px; }
+.chip .w { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.chip .w small { color: var(--dim); font-size: 16px; }
+.chip .a { font-weight: 600; }
+@keyframes rowin { from { background: rgba(10,132,255,.12); } }
+
+.note { display: flex; flex-direction: column; background: linear-gradient(160deg, #fff, #f3f6ff); }
+#bubble { display: flex; gap: 16px; margin-top: 14px; align-items: flex-start; }
+#emo { font-size: 44px; line-height: 1; }
+#itext { font-size: 28px; font-weight: 600; line-height: 1.25; letter-spacing: -.3px; transition: opacity .35s; }
+#itext.out { opacity: 0; }
+#itext .q { display: block; font-size: 17px; color: var(--blue); font-weight: 500; margin-bottom: 6px; }
+#bubble.answer #itext { font-size: 22px; font-weight: 500; }
+
+/* notification banner, like macOS */
+#toast { position: absolute; right: 80px; top: 70px; width: 560px; z-index: 50; display: grid; grid-template-columns: 64px 1fr auto; gap: 18px; align-items: center;
+  padding: 18px 22px; border-radius: 22px; background: rgba(250,250,252,.86); backdrop-filter: blur(30px); box-shadow: 0 0 0 1px rgba(0,0,0,.08), 0 24px 50px -12px rgba(0,0,0,.3);
+  transform: translateX(130%); transition: transform .55s cubic-bezier(.2,.9,.25,1.05); }
+#toast.show { transform: none; }
+#tbig { width: 64px; height: 64px; border-radius: 15px; display: grid; place-items: center; font-size: 34px; background: linear-gradient(160deg, #0a84ff, #5e5ce6); }
+#th { font-size: 20px; font-weight: 600; }
+#tp { font-size: 18px; color: var(--dim); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 330px; }
+#tamt { font-size: 28px; font-weight: 700; }
+
+#milestone { position: absolute; inset: 0; z-index: 55; display: grid; place-items: center; background: rgba(245,245,247,.6); backdrop-filter: blur(12px); opacity: 0; pointer-events: none; transition: opacity .4s; }
+#milestone.show { opacity: 1; }
+#milestone .sheet { background: #fff; border-radius: 30px; padding: 50px 80px; text-align: center; box-shadow: 0 40px 80px -20px rgba(0,0,0,.35); }
+#milestone h2 { font-size: 120px; font-weight: 600; letter-spacing: -4px; }
+#milestone p { font-size: 28px; color: var(--dim); margin-top: 6px; }
+#milestone .badge { font-size: 64px; }
+#confetti { position: fixed; inset: 0; pointer-events: none; z-index: 60; }
+#unlock { position: fixed; inset: 0; z-index: 100; display: none; place-items: center; background: rgba(0,0,0,.4); backdrop-filter: blur(8px); cursor: pointer; }
+#unlock.show { display: grid; }
+#unlock div { background: #fff; border-radius: 20px; padding: 30px 44px; font-size: 26px; font-weight: 600; text-align: center; }
+#unlock small { display: block; font-size: 17px; font-weight: 400; color: var(--dim); margin-top: 6px; }
+</style>
+</head>
+<body>
+<div class="wall"></div>
+<div id="stage">
+  <div class="win">
+    <aside class="side">
+      <div class="lights"><i></i><i></i><i></i></div>
+      <div class="nav sel"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12l9-8 9 8M5 10v10h14V10"/></svg>Today</div>
+      <div class="sec">CAMPAIGNS · META</div>
+      <div id="camps"></div>
+      <div class="sec">SELLING TODAY</div>
+      <div id="prods"></div>
+    </aside>
+    <section class="main">
+      <div class="bar">
+        <h1 class="storename"></h1>
+        <div class="seg"><span class="on">Today</span><span>Week</span><span>Month</span></div>
+        <div id="clock"></div>
+        <div class="live" id="live"><span class="dot"></span><span id="livetxt">Live</span></div>
+      </div>
+      <div class="body">
+        <div class="hero">
+          <div>
+            <div class="k">Sales today</div>
+            <div id="rev"><span class="rs">₹</span><span id="revnum">0</span></div>
+          </div>
+          <div class="stats">
+            <div class="stat"><b id="orders">0</b><small id="orderword">orders</small></div>
+            <div class="stat"><b id="aov">₹0</b><small>per order</small></div>
+            <div class="stat"><b id="newc">0</b><small>new customers</small></div>
+            <div id="vsy" hidden></div>
+          </div>
+          <div id="headline"></div>
+        </div>
+        <div class="card chart">
+          <h3><span>Sales through the day</span><span class="legend"><span><i></i>Today</span><span><i class="y"></i>Yesterday</span></span></h3>
+          <svg id="chart" preserveAspectRatio="none"></svg>
+        </div>
+        <div class="card ads">
+          <h3><span>Return on ads</span><span id="weather" style="font-size:22px"></span></h3>
+          <div id="roas">-</div>
+          <div class="gauge"><b id="gfill"></b><em id="gbe"></em></div>
+          <div id="roasnote"></div>
+          <div class="row"><span>Spent</span><b id="spend">₹0</b></div>
+          <div class="row" style="margin-top:8px;padding-top:8px"><span>Meta reports</span><b id="mroas">-</b></div>
+        </div>
+        <div class="card"><h3><span>Latest orders</span></h3><div id="chips"></div></div>
+        <div class="card note"><h3><span>Insight</span></h3>
+          <div id="bubble"><span id="emo">✨</span><span id="itext">Loading today…</span></div></div>
+      </div>
+    </section>
+  </div>
+  <div id="toast"><div id="tbig">🛍️</div><div><div id="th">New order</div><div id="tp"></div></div><span id="tamt"></span></div>
+  <div id="milestone"><div class="sheet"><div class="badge">🏆</div><h2 id="mh">₹25,000</h2><p>crossed today</p></div></div>
+</div>
+<canvas id="confetti"></canvas>
+<div id="unlock"><div>Click to turn on sound<small>Browsers need one click before they can play sound. The TV app doesn't.</small></div></div>
+<script>
+window.DESIGN = "studio";
+window.BOARD_COPY = { toastEmoji: ["", "🛍️", "🛍️", "🎉", "🤩"], toastTitle: ["", "New order", "New order", "Big order", "Huge order"] };
+window.CONFETTI = ["#0a84ff", "#5e5ce6", "#64d2ff", "#30a46c", "#ffd60a"];
+window.CAMP_LIMIT = 5;
+window.renderCampaign = (c, be) => {
+  const r = c.roas || 0, col = r >= be ? "var(--green)" : r >= be * .75 ? "var(--orange)" : "var(--red)";
+  return `<div class="cr"><i style="background:${col}"></i><span class="n">${esc(c.short)}</span><span class="v" style="color:${col}">${c.roas ? c.roas.toFixed(2) + "x" : "–"}</span>
+    <small>₹${inr(c.spend)} · ${c.purchases} purchase${c.purchases === 1 ? "" : "s"}</small></div>`;
+};
+window.renderChip = o => `<span class="t">${o.at}</span><span class="w">${esc(itemsText(o))}${o.city ? ` <small>· ${esc(o.city)}</small>` : ""}</span><span class="a">₹${inr(o.amount)}</span>`;
+document.addEventListener("board:state", e => {
+  const s = e.detail, g = document.getElementById.bind(document);
+  g("newc").textContent = s.new_customers ?? 0;
+  g("prods").innerHTML = (s.products || []).slice(0, 3).map(([n, u]) => `<div class="pr"><span>${esc(n)}</span><span>${u} sold</span></div>`).join("");
+  const be = s.break_even, r = s.roas_real || 0;
+  g("gfill").style.width = Math.min(100, r / 3 * 100) + "%";
+  g("gfill").style.background = r >= be ? "var(--green)" : r >= be * .75 ? "var(--orange)" : "var(--red)";
+  g("gbe").style.left = be / 3 * 100 + "%";
+  const svg = g("chart"), W = svg.clientWidth || 1240, H = svg.clientHeight || 300;
+  svg.setAttribute("viewBox", `0 0 ${W} ${H + 24}`);
+  const c = curvePaths(s, W, H); if (!c) return;
+  const grid = [6, 12, 18].map(h => `<line x1="${c.X(h)}" x2="${c.X(h)}" y1="0" y2="${H}" stroke="rgba(0,0,0,.06)"/><text class="ax" x="${c.X(h)}" y="${H + 20}" text-anchor="middle">${h === 12 ? "12 pm" : h > 12 ? h - 12 + " pm" : h + " am"}</text>`).join("");
+  svg.innerHTML = `<defs><linearGradient id="ga" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0a84ff" stop-opacity=".22"/><stop offset="1" stop-color="#0a84ff" stop-opacity="0"/></linearGradient></defs>
+    ${grid}<line x1="0" x2="${W}" y1="${H}" y2="${H}" stroke="rgba(0,0,0,.1)"/>
+    <path d="${c.yesterday}" fill="none" stroke="#c7c7cc" stroke-width="3" stroke-dasharray="7 7" stroke-linejoin="round"/>
+    <path d="${c.todayArea}" fill="url(#ga)"/>
+    <path d="${c.today}" fill="none" stroke="#0a84ff" stroke-width="4.5" stroke-linejoin="round" stroke-linecap="round"/>
+    <circle cx="${c.dot[0]}" cy="${c.dot[1]}" r="9" fill="#0a84ff" stroke="#fff" stroke-width="4"/>
+    <text class="ax" x="${Math.min(c.dot[0] + 16, W - 120)}" y="${c.dot[1] - 14}" style="fill:#0a84ff;font-weight:600;font-size:17px">₹${inr(s.revenue)}</text>`;
+});
+</script>
+<script src="/board.js?v=1"></script>
+</body>
+</html>

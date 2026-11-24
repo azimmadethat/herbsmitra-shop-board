@@ -1,0 +1,12 @@
+node_modules/
+.secrets.env
+.secrets.json
+.dev.vars
+.wrangler/
+board.env
+.env
+.env.*
+desktop/board.env
+dist/
+*.exe
+.vercel/
