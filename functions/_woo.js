@@ -41,6 +41,13 @@ const HISTORY_DAYS = 28;
 
 const titleCase = s => String(s || "").toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
 
+let LATEST_TODAY_CACHE = {
+  date: "",
+  revenue: 0,
+  ordersCount: 0,
+  ordersMap: new Map(),
+};
+
 function toB64(s) {
   if (typeof btoa === "function") return btoa(s);
   return Buffer.from(s, "utf8").toString("base64");
@@ -77,24 +84,46 @@ export async function wooGet(env, path, params = {}) {
   return (await wooRaw(env, path, params)).data;
 }
 
-/** All orders in a date window, paged. `fields` keeps the payloads small. */
-async function wooOrders(env, { after, before, fields, maxPages = 40 }) {
-  const out = [];
-  let page = 1, totalPages = 1;
-  do {
-    const params = { per_page: 100, page, order: "asc", orderby: "date", status: "any", _fields: fields };
-    if (after) params.after = after;
-    if (before) params.before = before;
+export async function wooRawWithRetry(env, path, params = {}, retries = 2) {
+  for (let attempt = 0; attempt <= retries; attempt++) {
     try {
-      const { data, totalPages: tp } = await wooRaw(env, "/orders", params);
-      out.push(...(Array.isArray(data) ? data : []));
-      totalPages = parseInt(tp || "1", 10) || 1;
-      page++;
-    } catch {
-      break;
+      return await wooRaw(env, path, params);
+    } catch (err) {
+      if (attempt === retries) throw err;
+      await new Promise(r => setTimeout(r, 350 * (attempt + 1)));
     }
-  } while (page <= totalPages && page <= maxPages);
-  return out;
+  }
+}
+
+/** All orders in a date window, paged concurrently in parallel. `fields` keeps the payloads small. */
+async function wooOrders(env, { after, before, fields, maxPages = 30 }) {
+  const params = { per_page: 100, page: 1, order: "asc", orderby: "date", status: "any", _fields: fields };
+  if (after) params.after = after;
+  if (before) params.before = before;
+
+  try {
+    const p1 = await wooRawWithRetry(env, "/orders", params);
+    const out = Array.isArray(p1.data) ? [...p1.data] : [];
+    const totalPages = Math.min(parseInt(p1.totalPages || "1", 10) || 1, maxPages);
+
+    if (totalPages > 1) {
+      const pagePromises = [];
+      for (let p = 2; p <= totalPages; p++) {
+        pagePromises.push(
+          wooRawWithRetry(env, "/orders", { ...params, page: p })
+            .then(res => (Array.isArray(res.data) ? res.data : []))
+            .catch(() => [])
+        );
+      }
+      const rest = await Promise.all(pagePromises);
+      for (const pageOrders of rest) {
+        out.push(...pageOrders);
+      }
+    }
+    return out;
+  } catch {
+    return [];
+  }
 }
 
 const TODAY_FIELDS = "id,number,date_created,date_created_gmt,status,total,billing,shipping,line_items,customer_id,payment_method,payment_method_title";
@@ -121,20 +150,19 @@ function mapOrder(o, storeName, tz) {
   };
 }
 
-async function ordersSince(env, sinceISO, storeName, tz) {
-  // Fetch from 24h before local midnight: WooCommerce interprets `after` in
-  // the site's own timezone, so the window is deliberately wide and the
-  // exact day filter happens below, on the GMT timestamp.
-  const wide = new Date(Date.parse(sinceISO) - 24 * 3600 * 1000).toISOString();
-  const raw = await wooOrders(env, { after: wide, fields: TODAY_FIELDS, maxPages: 6 });
+async function ordersSince(env, sinceISO, storeName, tz, todayDate) {
+  // Query starting 1 hour before local midnight to catch all today's orders
+  // without pulling in hundreds of yesterday orders unnecessarily.
+  const after = todayDate ? `${addDays(todayDate, -1)}T23:00:00` : sinceISO;
+  const raw = await wooOrders(env, { after, fields: TODAY_FIELDS, maxPages: 25 });
   return raw.map(o => mapOrder(o, storeName, tz));
 }
 
 async function ordersForDay(env, targetDate, storeName, tz) {
-  // Query orders covering the target day (with ±24h buffer for WooCommerce timezone offset)
-  const after = addDays(targetDate, -1) + "T00:00:00";
-  const before = addDays(targetDate, 1) + "T23:59:59";
-  const raw = await wooOrders(env, { after, before, fields: TODAY_FIELDS, maxPages: 50 });
+  // Query orders covering the target day (with 1-hour buffer on both sides)
+  const after = addDays(targetDate, -1) + "T23:00:00";
+  const before = addDays(targetDate, 1) + "T01:00:00";
+  const raw = await wooOrders(env, { after, before, fields: TODAY_FIELDS, maxPages: 25 });
   return raw.map(o => mapOrder(o, storeName, tz)).filter(o => o.at.date === targetDate);
 }
 
@@ -258,16 +286,51 @@ export async function snapshot(env, targetDate = null) {
   const [{ orders: all }, hist, meta, stock] = await Promise.all([
     isCustomDate
       ? ordersForDay(env, today, storeName, tz).then(list => ({ orders: list }))
-      : ordersSince(env, midnightISO(now, tz), storeName, tz).then(async list => ({ orders: list })),
+      : ordersSince(env, midnightISO(now, tz), storeName, tz, today).then(async list => ({ orders: list })),
     history(env, l.date, storeName, tz),
     metaCampaigns(env, storeName).catch(e => ({ error: String(e.message || e), campaigns: [] })),
     lowStock(env).catch(() => null),
   ]);
-  const orders = all.filter(o => !o.cancelled && o.at.date === today);
+
+  if (!isCustomDate) {
+    if (LATEST_TODAY_CACHE.date !== today) {
+      LATEST_TODAY_CACHE = {
+        date: today,
+        revenue: 0,
+        ordersCount: 0,
+        ordersMap: new Map(),
+      };
+    }
+    for (const o of all) {
+      if (o.id) LATEST_TODAY_CACHE.ordersMap.set(o.id, o);
+    }
+  }
+
+  const effectiveAll = isCustomDate
+    ? all
+    : Array.from(LATEST_TODAY_CACHE.ordersMap.values());
+
+  const orders = effectiveAll
+    .filter(o => !o.cancelled && o.at.date === today)
+    .sort((a, b) => (a.id || 0) - (b.id || 0));
+
   if (!isCustomDate) {
     await markNew(env, orders.slice(0, 6));
   }
-  const rev = orders.reduce((a, o) => a + o.amount, 0);
+
+  const calculatedRev = orders.reduce((a, o) => a + o.amount, 0);
+  let finalRev = Math.round(calculatedRev);
+  let finalOrdersCount = orders.length;
+
+  if (!isCustomDate) {
+    // Monotonic ratchet: live sales and order counts never decrease!
+    finalRev = Math.max(finalRev, LATEST_TODAY_CACHE.revenue);
+    finalOrdersCount = Math.max(finalOrdersCount, LATEST_TODAY_CACHE.ordersCount);
+    LATEST_TODAY_CACHE.revenue = finalRev;
+    LATEST_TODAY_CACHE.ordersCount = finalOrdersCount;
+  }
+  const rev = finalRev;
+
   const cityMap = {};
   for (const o of orders) {
     const e = cityMap[o.city || "Unknown"] || (cityMap[o.city || "Unknown"] = { city: o.city || "Unknown", orders: 0, revenue: 0 });
@@ -277,12 +340,12 @@ export async function snapshot(env, targetDate = null) {
     .map(c => ({ city: c.city, orders: c.orders, revenue: Math.round(c.revenue) }));
   const rejected = {};
   for (const st of ["cancelled", "refunded", "failed"]) {
-    const list = all.filter(o => o.at.date === today && o.status === st);
+    const list = effectiveAll.filter(o => o.at.date === today && o.status === st);
     rejected[st] = { orders: list.length, amount: Math.round(list.reduce((a, o) => a + o.amount, 0)) };
   }
   const statuses = {};
   for (const st of ["pending", "processing", "on-hold", "completed", "cancelled", "refunded", "failed"]) {
-    const list = all.filter(o => o.at.date === today && o.status === st);
+    const list = effectiveAll.filter(o => o.at.date === today && o.status === st);
     statuses[st] = { orders: list.length, amount: Math.round(list.reduce((a, o) => a + o.amount, 0)) };
   }
   // COD is payment_method "cod" in WooCommerce.
@@ -372,7 +435,7 @@ export async function snapshot(env, targetDate = null) {
     product_sales,
     customers,
     low_stock: stock,
-    orders_today: all.filter(o => o.at.date === today).map(publicOrder),
+    orders_today: effectiveAll.filter(o => o.at.date === today).map(publicOrder),
     recent: orders.slice(-6).reverse().map(publicOrder),
     order_ids: orders.map(o => o.name),
     milestones: MILESTONES,
@@ -386,7 +449,7 @@ export async function snapshot(env, targetDate = null) {
   const allDaysSet = new Set([today, l.date, ...Object.keys(hist.hours || {}), ...Object.keys(hist.orders || {})]);
   const dailyHistory = Array.from(allDaysSet).sort().map(d => {
     const isToday = d === l.date;
-    const dayOrders = isToday ? (all.filter(o => !o.cancelled && o.at.date === d).length) : (hist.orders[d] || 0);
+    const dayOrders = isToday ? (effectiveAll.filter(o => !o.cancelled && o.at.date === d).length) : (hist.orders[d] || 0);
     const dayRevenue = Math.round(isToday ? rev : dayTotal(hist, d));
     return {
       date: d,
@@ -411,7 +474,7 @@ export async function snapshot(env, targetDate = null) {
   if (isCustomDate) {
     await cachePut(env, `snap-day-${today}`, snap, 86400);
   } else {
-    await cachePut(env, `snap-live-${today}`, snap, 25);
+    await cachePut(env, `snap-live-${today}`, snap, 15);
   }
   return snap;
 }

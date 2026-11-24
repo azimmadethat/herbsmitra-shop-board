@@ -476,9 +476,99 @@
     border-radius: 12px;
     margin-top: 12px;
   }
+
+  /* Full-screen Loading Overlay on Open / Switch */
+  .ops-loading-overlay {
+    position: fixed;
+    inset: 0;
+    background: #f8fafc;
+    z-index: 99999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: opacity .35s ease, visibility .35s ease;
+  }
+  .ops-loading-overlay.hidden {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+  }
+  .ops-loading-content {
+    text-align: center;
+    max-width: 440px;
+    padding: 36px 32px;
+    background: #ffffff;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    box-shadow: 0 16px 48px rgba(0,0,0,.08);
+  }
+  .ops-spinner {
+    position: relative;
+    width: 80px;
+    height: 80px;
+    margin: 0 auto 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .ops-spin-logo {
+    width: 46px;
+    height: 46px;
+    object-fit: contain;
+    border-radius: 12px;
+  }
+  .ops-spin-ring {
+    position: absolute;
+    inset: 0;
+    border: 3.5px solid rgba(22, 163, 74, 0.15);
+    border-top-color: #16a34a;
+    border-radius: 50%;
+    animation: opsSpin 0.85s cubic-bezier(0.55, 0.15, 0.45, 0.85) infinite;
+  }
+  @keyframes opsSpin {
+    to { transform: rotate(360deg); }
+  }
+  .ops-loading-title {
+    font-size: 21px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    color: var(--ink);
+    margin-bottom: 8px;
+  }
+  .ops-loading-sub {
+    font-size: 14px;
+    color: var(--muted);
+    line-height: 1.5;
+    margin-bottom: 18px;
+  }
+  .ops-loading-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(22, 163, 74, 0.1);
+    color: #16a34a;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 6px 14px;
+    border-radius: 999px;
+    border: 1px solid rgba(22, 163, 74, 0.25);
+  }
 </style>
 </head>
 <body>
+
+<!-- Full-screen Loading State on Initial Open / Switch -->
+<div id="opsLoadingOverlay" class="ops-loading-overlay">
+  <div class="ops-loading-content">
+    <div class="ops-spinner">
+      <img src="/meta-sunrise.png" alt="Herbs Mitra" class="ops-spin-logo">
+      <div class="ops-spin-ring"></div>
+    </div>
+    <div class="ops-loading-title">Loading Operations Board…</div>
+    <div class="ops-loading-sub">Connecting live to WooCommerce store and Meta Ads</div>
+    <div class="ops-loading-badge">⚡ Real-time Data Sync</div>
+  </div>
+</div>
 
 <nav class="navbar">
   <div class="nav-wrap">
@@ -650,6 +740,28 @@ const esc = t => String(t || "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "
 const STATUS_LABEL = { pending: "Pending", processing: "Processing", "on-hold": "On hold", completed: "Completed", cancelled: "Cancelled", refunded: "Refunded", failed: "Failed" };
 let state = null;
 let activeStatusFilter = "";
+let maxSeenOpsRev = 0;
+let maxSeenOpsOrders = 0;
+
+function showLoading(title, sub) {
+  const overlay = $("opsLoadingOverlay");
+  if (overlay) {
+    if (title) {
+      const t = overlay.querySelector(".ops-loading-title");
+      if (t) t.textContent = title;
+    }
+    if (sub) {
+      const s = overlay.querySelector(".ops-loading-sub");
+      if (s) s.textContent = sub;
+    }
+    overlay.classList.remove("hidden");
+  }
+}
+
+function hideLoading() {
+  const overlay = $("opsLoadingOverlay");
+  if (overlay) overlay.classList.add("hidden");
+}
 
 function kpi(k, v, d, bad, good, icon, extraAttrs = "") {
   return `<div class="kpi-card${bad ? " bad" : ""}${good ? " good" : ""}" ${extraAttrs}>
@@ -661,6 +773,7 @@ function kpi(k, v, d, bad, good, icon, extraAttrs = "") {
 
 function render(s) {
   state = s;
+  hideLoading();
   if (s.store_name) $("store").textContent = s.store_name + " · Operations Command Center";
   const isPast = Boolean(s.is_past_date);
   $("date").textContent = isPast
@@ -673,7 +786,15 @@ function render(s) {
   const badAmt = rj.cancelled.amount + rj.refunded.amount + rj.failed.amount;
   const p = s.payment || { cod: { orders: 0, revenue: 0 }, prepaid: { orders: 0, revenue: 0 } };
   const c = s.customers || { new: 0, returning: 0, guest: 0 };
-  const totalRev = s.revenue || 0;
+  let totalRev = s.revenue || 0;
+  let totalOrders = s.orders || 0;
+  if (!isPast) {
+    if (totalRev < maxSeenOpsRev) totalRev = maxSeenOpsRev;
+    else maxSeenOpsRev = totalRev;
+    if (totalOrders < maxSeenOpsOrders) totalOrders = maxSeenOpsOrders;
+    else maxSeenOpsOrders = totalOrders;
+  }
+  const effAov = totalOrders ? Math.round(totalRev / totalOrders) : (s.aov || 0);
   const vsPct = s.vs_yesterday_pct;
 
   let vsText = "Yesterday ₹" + inr(s.yesterday_total);
@@ -682,7 +803,7 @@ function render(s) {
   }
 
   const salesTitle = isPast ? `Sales on ${s.selected_date}` : "Sales Today";
-  const salesSub = isPast ? `${s.orders || 0} orders on this date` : `${s.orders || 0} orders today`;
+  const salesSub = isPast ? `${s.orders || 0} orders on this date` : `${totalOrders} orders today`;
 
   let metaSpendVal = "—";
   let metaSpendDesc = "Not connected";
@@ -707,7 +828,7 @@ function render(s) {
 
   $("kpis").innerHTML =
     kpi(salesTitle, "₹" + inr(totalRev), salesSub, false, totalRev > 0, "💰") +
-    kpi("Per Order (AOV)", "₹" + inr(s.aov), vsText, vsPct !== null && vsPct < 0, vsPct !== null && vsPct > 0, "🏷️") +
+    kpi("Per Order (AOV)", "₹" + inr(effAov), vsText, vsPct !== null && vsPct < 0, vsPct !== null && vsPct > 0, "🏷️") +
     kpi("Cash On Delivery", p.cod.orders + " orders", "₹" + inr(p.cod.revenue), false, false, "💵") +
     kpi("Prepaid / Online", p.prepaid.orders + " orders", "₹" + inr(p.prepaid.revenue), false, false, "💳") +
     kpi("New Customers", c.new, `${c.returning} returning · ${c.guest || 0} guest`, false, c.new > 0, "🌱") +
@@ -877,6 +998,7 @@ function openBestDaysCalendar(onSelectDate) {
     selectedDate = d;
     if ($("datePicker")) $("datePicker").value = d;
     if ($("liveTodayBtn")) $("liveTodayBtn").style.display = "inline-flex";
+    showLoading(`Loading Archive for ${d}…`, `Fetching orders and performance for ${d}`);
     poll(true);
   });
 
@@ -1166,6 +1288,7 @@ if ($("datePicker")) {
     } else {
       selectedDate = val;
       $("liveTodayBtn").style.display = "inline-flex";
+      showLoading(`Loading Archive for ${val}…`, `Fetching orders and performance for ${val}`);
       poll(true);
     }
   });
@@ -1175,6 +1298,7 @@ function resetToLive() {
   selectedDate = null;
   if ($("datePicker")) $("datePicker").value = "";
   if ($("liveTodayBtn")) $("liveTodayBtn").style.display = "none";
+  showLoading("Loading Live Operations Board…", "Connecting live to WooCommerce store and Meta Ads");
   poll(true);
 }
 if ($("liveTodayBtn")) $("liveTodayBtn").onclick = resetToLive;

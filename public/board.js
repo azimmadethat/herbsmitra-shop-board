@@ -16,6 +16,7 @@ const KEY = (() => {
 const withKey = path => API + path + (path.includes("?") ? "&" : "?") + "k=" + encodeURIComponent(KEY);
 const TV = window.TVBridge || null;   // provided by the Android TV app
 let state = null, shownRev = 0, insightIdx = 0;
+let highestLiveRev = 0, highestLiveOrders = 0;
 
 /* ---------- stage scaling + burn-in drift ---------- */
 function fit() {
@@ -109,6 +110,12 @@ function render(s) {
     $("hat").innerHTML = HATS[s.daily.hat] || "";
     $("headline").textContent = s.daily.headline;
     $("subline").textContent = s.daily.subline;
+  }
+  if (!s.is_past_date) {
+    if (s.revenue < highestLiveRev) s.revenue = highestLiveRev;
+    else highestLiveRev = s.revenue;
+    if (s.orders < highestLiveOrders) s.orders = highestLiveOrders;
+    else highestLiveOrders = s.orders;
   }
   countTo(s.revenue);
   $("orders").textContent = s.orders;
@@ -284,6 +291,10 @@ function itemsText(o) {
 function esc(t) { return String(t).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
 
 function countTo(target) {
+  if (!state || !state.is_past_date) {
+    if (target < highestLiveRev) target = highestLiveRev;
+    else highestLiveRev = target;
+  }
   if (target === shownRev) return;
   const from = shownRev, start = performance.now(), dur = from === 0 ? 1600 : 1100;
   if (from !== 0 && target > from) { const r = $("rev"); r.classList.remove("bump"); void r.offsetWidth; r.classList.add("bump"); }
