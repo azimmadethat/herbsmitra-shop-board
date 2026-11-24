@@ -157,7 +157,7 @@ function render(s) {
 
   // ads
   const be = s.break_even;
-  const META_SUNRISE_ICON = '<img src="/meta-sunrise.png" alt="Meta" class="weather-ico" style="width:1.15em;height:1.15em;object-fit:contain;vertical-align:middle;display:inline-block;filter:drop-shadow(0 4px 12px rgba(0,0,0,0.08));">';
+  const META_SUNRISE_ICON = '<img src="/meta-sunrise.png?v=2" alt="Meta" class="weather-ico" style="width:1.15em;height:1.15em;object-fit:contain;vertical-align:middle;display:inline-block;filter:drop-shadow(0 4px 12px rgba(0,0,0,0.08));">';
   if (s.spend) {
     const r = s.roas_real, early = s.spend < 1500;
     $("roas").innerHTML = `${r.toFixed(2)}<small>x</small>`;

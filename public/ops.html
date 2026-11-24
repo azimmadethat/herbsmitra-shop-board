@@ -561,7 +561,7 @@
 <div id="opsLoadingOverlay" class="ops-loading-overlay">
   <div class="ops-loading-content">
     <div class="ops-spinner">
-      <img src="/meta-sunrise.png" alt="Herbs Mitra" class="ops-spin-logo">
+      <img src="/meta-sunrise.png?v=2" alt="Herbs Mitra" class="ops-spin-logo">
       <div class="ops-spin-ring"></div>
     </div>
     <div class="ops-loading-title">Loading Operations Board…</div>
@@ -835,7 +835,7 @@ function render(s) {
     kpi("Unfulfilled / Failed", badN + " orders", badAmt ? "₹" + inr(badAmt) + " lost" : "None today", badN > 0, badN === 0, "❌") +
     kpi("Yesterday Total", "₹" + inr(s.yesterday_total), s.projection ? "Heading for ~₹" + inr(s.projection) : "Full day sales", false, false, "📈") +
     kpi("Month Best Day", s.month_best ? "₹" + inr(s.month_best.revenue) : "-", s.month_best ? s.month_best.date : "", false, false, "🏆") +
-    kpi("Meta Ad Spend", metaSpendVal, metaSpendDesc, metaBad, metaGood, '<img src="/meta-sunrise.png" alt="Meta" style="width:18px;height:18px;object-fit:contain;vertical-align:middle;display:inline-block;border-radius:3px;">', 'style="cursor:pointer;" onclick="document.getElementById(\'meta-section\')?.scrollIntoView({behavior:\'smooth\'})" title="Click to view Meta Campaigns breakdown"');
+    kpi("Meta Ad Spend", metaSpendVal, metaSpendDesc, metaBad, metaGood, '<img src="/meta-sunrise.png?v=2" alt="Meta" style="width:18px;height:18px;object-fit:contain;vertical-align:middle;display:inline-block;border-radius:3px;">', 'style="cursor:pointer;" onclick="document.getElementById(\'meta-section\')?.scrollIntoView({behavior:\'smooth\'})" title="Click to view Meta Campaigns breakdown"');
 
   const st = s.statuses || {};
   $("pipeline").innerHTML = ["pending", "processing", "on-hold", "completed", "cancelled", "refunded", "failed"].map(k => {
