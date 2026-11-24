@@ -107,17 +107,20 @@ async function wooOrders(env, { after, before, fields, maxPages = 30, order = "a
     const totalPages = Math.min(parseInt(p1.totalPages || "1", 10) || 1, maxPages);
 
     if (totalPages > 1) {
-      const pagePromises = [];
-      for (let p = 2; p <= totalPages; p++) {
-        pagePromises.push(
-          wooRawWithRetry(env, "/orders", { ...params, page: p })
-            .then(res => (Array.isArray(res.data) ? res.data : []))
-            .catch(() => [])
-        );
-      }
-      const rest = await Promise.all(pagePromises);
-      for (const pageOrders of rest) {
-        out.push(...pageOrders);
+      const concurrency = 6;
+      for (let p = 2; p <= totalPages; p += concurrency) {
+        const batch = [];
+        for (let b = p; b < Math.min(p + concurrency, totalPages + 1); b++) {
+          batch.push(
+            wooRawWithRetry(env, "/orders", { ...params, page: b })
+              .then(res => (Array.isArray(res.data) ? res.data : []))
+              .catch(() => [])
+          );
+        }
+        const batchRes = await Promise.all(batch);
+        for (const pageOrders of batchRes) {
+          out.push(...pageOrders);
+        }
       }
     }
     return out;
@@ -164,6 +167,14 @@ async function ordersForDay(env, targetDate, storeName, tz) {
   const before = addDays(targetDate, 1) + "T01:00:00";
   const raw = await wooOrders(env, { after, before, fields: TODAY_FIELDS, maxPages: 25 });
   return raw.map(o => mapOrder(o, storeName, tz)).filter(o => o.at.date === targetDate);
+}
+
+async function ordersForDateRange(env, startDate, endDate, storeName, tz) {
+  // Query orders covering window from startDate to endDate (with buffer)
+  const after = addDays(startDate, -1) + "T23:00:00";
+  const before = addDays(endDate, 1) + "T01:00:00";
+  const raw = await wooOrders(env, { after, before, fields: TODAY_FIELDS, maxPages: 60, order: "desc" });
+  return raw.map(o => mapOrder(o, storeName, tz)).filter(o => o.at.date >= startDate && o.at.date <= endDate);
 }
 
 /** 14 days of hourly sales and per-day order counts, aggregated here. */
@@ -270,15 +281,35 @@ const byNow = (h, d, l) => {
   return s + (row[l.hour] || 0) * (l.minute / 60);
 };
 
-export async function snapshot(env, targetDate = null) {
+export async function snapshot(env, targetDate = null, targetEndDate = null) {
   const now = new Date();
   const tz = env.STORE_TZ || "Asia/Kolkata";
   const storeName = env.STORE_NAME || "Herbs Mitra";
   const l = local(now, tz);
-  const isCustomDate = Boolean(targetDate && /^\d{4}-\d{2}-\d{2}$/.test(targetDate) && targetDate !== l.date);
-  const today = isCustomDate ? targetDate : l.date;
 
-  if (isCustomDate) {
+  const isDatePattern = d => Boolean(d && /^\d{4}-\d{2}-\d{2}$/.test(d));
+  let startDate = isDatePattern(targetDate) ? targetDate : null;
+  let endDate = isDatePattern(targetEndDate) ? targetEndDate : null;
+
+  if (startDate && endDate) {
+    if (startDate > endDate) {
+      const tmp = startDate; startDate = endDate; endDate = tmp;
+    }
+    if (startDate === endDate) {
+      endDate = null;
+    }
+  }
+
+  const isRange = Boolean(startDate && endDate && startDate !== endDate);
+  const isCustomDate = !isRange && Boolean(startDate && startDate !== l.date);
+  const today = isRange ? `${startDate} to ${endDate}` : (isCustomDate ? startDate : l.date);
+
+  if (isRange) {
+    const isHistoricalRange = endDate < l.date;
+    const cacheKey = `snap-range-${startDate}_${endDate}`;
+    const cachedSnap = await cacheGet(env, cacheKey);
+    if (cachedSnap) return cachedSnap;
+  } else if (isCustomDate) {
     const cachedSnap = await cacheGet(env, `snap-day-${today}`);
     if (cachedSnap) return cachedSnap;
   } else {
@@ -286,20 +317,26 @@ export async function snapshot(env, targetDate = null) {
     if (cachedLive) return cachedLive;
   }
 
-  const yday = addDays(today, -1);
+  const yday = addDays(l.date, -1);
   const breakEven = +(env.BREAK_EVEN_ROAS || 2);
-  const effL = isCustomDate ? { ...l, hour: 23, minute: 59, date: today } : l;
+  const effL = (isCustomDate || isRange) ? { ...l, hour: 23, minute: 59, date: isRange ? endDate : today } : l;
+
+  const metaRange = isRange
+    ? { since: startDate, until: endDate }
+    : (isCustomDate ? { since: startDate, until: startDate } : null);
 
   const [{ orders: all }, hist, meta, stock] = await Promise.all([
-    isCustomDate
-      ? ordersForDay(env, today, storeName, tz).then(list => ({ orders: list }))
-      : ordersSince(env, midnightISO(now, tz), storeName, tz, today).then(async list => ({ orders: list })),
+    isRange
+      ? ordersForDateRange(env, startDate, endDate, storeName, tz).then(list => ({ orders: list }))
+      : (isCustomDate
+          ? ordersForDay(env, today, storeName, tz).then(list => ({ orders: list }))
+          : ordersSince(env, midnightISO(now, tz), storeName, tz, today).then(async list => ({ orders: list }))),
     history(env, l.date, storeName, tz),
-    metaCampaigns(env, storeName).catch(e => ({ error: String(e.message || e), campaigns: [] })),
+    metaCampaigns(env, storeName, metaRange).catch(e => ({ error: String(e.message || e), campaigns: [] })),
     lowStock(env).catch(() => null),
   ]);
 
-  if (!isCustomDate) {
+  if (!isCustomDate && !isRange) {
     if (LATEST_TODAY_CACHE.date !== today) {
       LATEST_TODAY_CACHE = {
         date: today,
@@ -313,15 +350,19 @@ export async function snapshot(env, targetDate = null) {
     }
   }
 
-  const effectiveAll = isCustomDate
+  const effectiveAll = (isCustomDate || isRange)
     ? all
     : Array.from(LATEST_TODAY_CACHE.ordersMap.values());
 
+  const inWindow = isRange
+    ? (d => d >= startDate && d <= endDate)
+    : (d => d === today);
+
   const orders = effectiveAll
-    .filter(o => !o.cancelled && o.at.date === today)
+    .filter(o => !o.cancelled && inWindow(o.at.date))
     .sort((a, b) => (a.id || 0) - (b.id || 0));
 
-  if (!isCustomDate) {
+  if (!isCustomDate && !isRange) {
     await markNew(env, orders.slice(0, 6));
   }
 
@@ -329,7 +370,7 @@ export async function snapshot(env, targetDate = null) {
   let finalRev = Math.round(calculatedRev);
   let finalOrdersCount = orders.length;
 
-  if (!isCustomDate) {
+  if (!isCustomDate && !isRange) {
     // Monotonic ratchet: live sales and order counts never decrease!
     finalRev = Math.max(finalRev, LATEST_TODAY_CACHE.revenue);
     finalOrdersCount = Math.max(finalOrdersCount, LATEST_TODAY_CACHE.ordersCount);
@@ -343,23 +384,19 @@ export async function snapshot(env, targetDate = null) {
     const e = cityMap[o.city || "Unknown"] || (cityMap[o.city || "Unknown"] = { city: o.city || "Unknown", orders: 0, revenue: 0 });
     e.orders++; e.revenue += o.amount;
   }
-  const cities = Object.values(cityMap).sort((a, b) => b.orders - a.orders || b.revenue - a.revenue).slice(0, 5)
+  const cities = Object.values(cityMap).sort((a, b) => b.orders - a.orders || b.revenue - a.revenue).slice(0, 10)
     .map(c => ({ city: c.city, orders: c.orders, revenue: Math.round(c.revenue) }));
   const rejected = {};
   for (const st of ["cancelled", "refunded", "failed"]) {
-    const list = effectiveAll.filter(o => o.at.date === today && o.status === st);
+    const list = effectiveAll.filter(o => inWindow(o.at.date) && o.status === st);
     rejected[st] = { orders: list.length, amount: Math.round(list.reduce((a, o) => a + o.amount, 0)) };
   }
   const statuses = {};
   for (const st of ["pending", "processing", "on-hold", "completed", "cancelled", "refunded", "failed"]) {
-    const list = effectiveAll.filter(o => o.at.date === today && o.status === st);
+    const list = effectiveAll.filter(o => inWindow(o.at.date) && o.status === st);
     statuses[st] = { orders: list.length, amount: Math.round(list.reduce((a, o) => a + o.amount, 0)) };
   }
   // COD is payment_method "cod" in WooCommerce.
-  // The title alone cannot be trusted: this
-  // store's title is "COD", not "Cash on
-  // Delivery", so testing only the title
-  // counted every COD order as prepaid.
   const isCod = o => o.method === "cod" || /cash on delivery/i.test(o.pay || "") || /^\s*cod\s*$/i.test(o.pay || "");
   const codList = orders.filter(isCod), preList = orders.filter(o => !isCod(o));
   const payment = {
@@ -371,7 +408,7 @@ export async function snapshot(env, targetDate = null) {
     const e = prodMap[it.name] || (prodMap[it.name] = { name: it.name, qty: 0, revenue: 0 });
     e.qty += it.qty; e.revenue += it.amount || 0;
   }
-  const product_sales = Object.values(prodMap).sort((a, b) => b.qty - a.qty || b.revenue - a.revenue).slice(0, 8)
+  const product_sales = Object.values(prodMap).sort((a, b) => b.qty - a.qty || b.revenue - a.revenue).slice(0, 10)
     .map(p => ({ name: p.name, qty: p.qty, revenue: Math.round(p.revenue) }));
   const customers = {
     new: orders.filter(o => o.customerId && o.new).length,
@@ -383,18 +420,18 @@ export async function snapshot(env, targetDate = null) {
   let compareDay = yday;
   const histDayTotal = d => (hist && hist.hours && hist.hours[d] ? dayTotal(hist, d) : 0);
   if (!histDayTotal(compareDay) && hist && hist.hours) {
-    const pastSalesDays = Object.keys(hist.hours).filter(d => d < today && histDayTotal(d) > 0).sort();
+    const pastSalesDays = Object.keys(hist.hours).filter(d => d < l.date && histDayTotal(d) > 0).sort();
     if (pastSalesDays.length) {
       compareDay = pastSalesDays[pastSalesDays.length - 1];
     }
   }
 
-  const yByNow = isCustomDate ? dayTotal(hist, compareDay) : byNow(hist, compareDay, l);
+  const yByNow = (isCustomDate || isRange) ? dayTotal(hist, compareDay) : byNow(hist, compareDay, l);
   const yTotal = dayTotal(hist, compareDay);
   const vsYesterdayPct = yByNow > 0
     ? Math.round((rev - yByNow) / yByNow * 100)
     : (yTotal > 0 ? Math.round((rev - yTotal) / yTotal * 100) : (rev > 0 ? 100 : null));
-  const projection = isCustomDate ? Math.round(rev) : project(hist, rev, l, today);
+  const projection = (isCustomDate || isRange) ? Math.round(rev) : project(hist, rev, l, today);
 
   const camps = (meta && meta.campaigns) || [];
   const spend = camps.reduce((a, c) => a + c.spend, 0), metaRev = camps.reduce((a, c) => a + c.value, 0);
@@ -403,25 +440,75 @@ export async function snapshot(env, targetDate = null) {
   const products = {};
   for (const o of orders) for (const it of o.items) products[it.name] = (products[it.name] || 0) + it.qty;
 
-  const month = today.slice(0, 8);
-  const monthDays = Object.keys(hist.hours).filter(d => d.startsWith(month));
-  const best = monthDays.length ? monthDays.reduce((a, d) => dayTotal(hist, d) > dayTotal(hist, a) ? d : a) : null;
-  const monthBest = best ? { date: best, revenue: Math.round(dayTotal(hist, best)) } : null;
+  let monthBest = null;
+  if (isRange) {
+    const dayMap = {};
+    for (const o of orders) dayMap[o.at.date] = (dayMap[o.at.date] || 0) + o.amount;
+    const days = Object.keys(dayMap);
+    if (days.length) {
+      const bestD = days.reduce((a, b) => dayMap[b] > dayMap[a] ? b : a);
+      monthBest = { date: bestD, revenue: Math.round(dayMap[bestD]) };
+    }
+  } else {
+    const month = today.slice(0, 8);
+    const monthDays = Object.keys(hist.hours).filter(d => d.startsWith(month));
+    const best = monthDays.length ? monthDays.reduce((a, d) => dayTotal(hist, d) > dayTotal(hist, a) ? d : a) : null;
+    monthBest = best ? { date: best, revenue: Math.round(dayTotal(hist, best)) } : null;
+  }
+
+  // Daily History for Range or Calendar
+  let dailyHistory = [];
+  if (isRange) {
+    const dayMap = {};
+    for (const o of effectiveAll) {
+      if (o.cancelled) continue;
+      const d = o.at.date;
+      if (inWindow(d)) {
+        if (!dayMap[d]) dayMap[d] = { date: d, orders: 0, revenue: 0 };
+        dayMap[d].orders++;
+        dayMap[d].revenue += o.amount;
+      }
+    }
+    dailyHistory = Object.values(dayMap).sort((a, b) => a.date.localeCompare(b.date)).map(d => ({
+      date: d.date,
+      orders: d.orders,
+      revenue: Math.round(d.revenue),
+      aov: d.orders > 0 ? Math.round(d.revenue / d.orders) : 0,
+      is_today: d.date === l.date
+    }));
+  } else {
+    const allDaysSet = new Set([today, l.date, ...Object.keys(hist.hours || {}), ...Object.keys(hist.orders || {})]);
+    dailyHistory = Array.from(allDaysSet).sort().map(d => {
+      const isToday = d === l.date;
+      const dayOrders = isToday ? (effectiveAll.filter(o => !o.cancelled && o.at.date === d).length) : (hist.orders[d] || 0);
+      const dayRevenue = Math.round(isToday ? rev : dayTotal(hist, d));
+      return {
+        date: d,
+        orders: dayOrders,
+        revenue: dayRevenue,
+        aov: dayOrders > 0 ? Math.round(dayRevenue / dayOrders) : 0,
+        is_today: isToday
+      };
+    }).filter(d => d.orders > 0 || d.revenue > 0 || d.is_today);
+  }
 
   const snap = {
     now: now.toISOString(),
-    date: today,
-    selected_date: today,
-    is_past_date: isCustomDate,
+    date: isRange ? l.date : today,
+    selected_date: isRange ? `${startDate} to ${endDate}` : today,
+    start_date: isRange ? startDate : (isCustomDate ? startDate : l.date),
+    end_date: isRange ? endDate : (isCustomDate ? startDate : l.date),
+    is_past_date: isCustomDate || isRange,
+    is_date_range: isRange,
     store_name: storeName,
     revenue: Math.round(rev),
     orders: orders.length,
     aov: orders.length ? Math.round(rev / orders.length) : 0,
     yesterday_by_now: Math.round(yByNow),
     yesterday_total: Math.round(yTotal),
-    vs_yesterday_pct: vsYesterdayPct,
-    compare_date: compareDay,
-    is_yesterday: compareDay === yday,
+    vs_yesterday_pct: isRange ? null : vsYesterdayPct,
+    compare_date: isRange ? null : compareDay,
+    is_yesterday: isRange ? false : (compareDay === yday),
     projection,
     spend: Math.round(spend),
     roas_real: spend ? Math.round(rev / spend * 100) / 100 : null,
@@ -442,43 +529,33 @@ export async function snapshot(env, targetDate = null) {
     product_sales,
     customers,
     low_stock: stock,
-    orders_today: effectiveAll.filter(o => o.at.date === today).map(publicOrder),
+    orders_today: effectiveAll.filter(o => inWindow(o.at.date)).map(publicOrder),
     recent: orders.slice(-6).reverse().map(publicOrder),
     order_ids: orders.map(o => o.name),
     milestones: MILESTONES,
     month_best: monthBest,
-    curve: curve(orders, hist, compareDay, effL),
+    curve: isRange ? { today: [], yesterday: [] } : curve(orders, hist, compareDay, effL),
     history_error: hist.error || null,
+    daily_history: dailyHistory,
+    best_days_orders: [...dailyHistory]
+      .filter(d => d.orders > 0)
+      .sort((a, b) => b.orders - a.orders || b.revenue - a.revenue),
+    best_days_revenue: [...dailyHistory]
+      .filter(d => d.revenue > 0)
+      .sort((a, b) => b.revenue - a.revenue || b.orders - a.orders),
     voice: false,
   };
 
-  // Best Days & Daily History for Calendar View
-  const allDaysSet = new Set([today, l.date, ...Object.keys(hist.hours || {}), ...Object.keys(hist.orders || {})]);
-  const dailyHistory = Array.from(allDaysSet).sort().map(d => {
-    const isToday = d === l.date;
-    const dayOrders = isToday ? (effectiveAll.filter(o => !o.cancelled && o.at.date === d).length) : (hist.orders[d] || 0);
-    const dayRevenue = Math.round(isToday ? rev : dayTotal(hist, d));
-    return {
-      date: d,
-      orders: dayOrders,
-      revenue: dayRevenue,
-      aov: dayOrders > 0 ? Math.round(dayRevenue / dayOrders) : 0,
-      is_today: isToday
-    };
-  }).filter(d => d.orders > 0 || d.revenue > 0 || d.is_today);
-
-  snap.daily_history = dailyHistory;
-  snap.best_days_orders = [...dailyHistory]
-    .filter(d => d.orders > 0)
-    .sort((a, b) => b.orders - a.orders || b.revenue - a.revenue);
-  snap.best_days_revenue = [...dailyHistory]
-    .filter(d => d.revenue > 0)
-    .sort((a, b) => b.revenue - a.revenue || b.orders - a.orders);
-
-  snap.insights = insights(snap, orders, hist, effL, today, camps, breakEven);
-  snap.daily = await daily(env, snap, hist, today, effL);
+  snap.insights = isRange ? [] : insights(snap, orders, hist, effL, today, camps, breakEven);
+  snap.daily = isRange ? fallbackDaily(l.date) : await daily(env, snap, hist, today, effL);
   snap._hist = hist;   // used by /api/ask, stripped before sending to the TV
-  if (isCustomDate) {
+  if (isRange) {
+    if (endDate < l.date) {
+      await cachePut(env, `snap-range-${startDate}_${endDate}`, snap, 86400);
+    } else {
+      await cachePut(env, `snap-range-${startDate}_${endDate}`, snap, 60);
+    }
+  } else if (isCustomDate) {
     await cachePut(env, `snap-day-${today}`, snap, 86400);
   } else {
     await cachePut(env, `snap-live-${today}`, snap, 15);
@@ -508,6 +585,7 @@ export function publicOrder(o) {
   const amount = Math.round(o.amount);
   return {
     name: o.name, at: `${String(o.at.hour).padStart(2, "0")}:${String(o.at.minute).padStart(2, "0")}`,
+    date: o.at ? o.at.date : null,
     amount, city: o.city, first: o.first, pay: o.pay, status: o.status, guest: !o.customerId, items: o.items, units: o.items.reduce((a, i) => a + i.qty, 0),
     tier: amount >= 2000 ? 4 : amount >= 1194 ? 3 : amount >= 796 ? 2 : 1, new: o.new,
   };

@@ -137,17 +137,26 @@ export function money(v) {
 
 // ------------------------------------------------------------------- meta --
 
-/** Today's spend and Meta-reported purchases per campaign. Cached 15 minutes. */
-export async function metaCampaigns(env, storeName) {
+/** Spend and Meta-reported purchases per campaign. Supports today or custom timeRange { since, until }. */
+export async function metaCampaigns(env, storeName, timeRange = null) {
   if (!env.META_TOKEN || !env.META_AD_ACCOUNT) return null;
   const acct = String(env.META_AD_ACCOUNT).replace(/^act_/, "");
-  return cached(env, `meta-${acct}`, 15 * 60, async () => {
+  const isCustomRange = Boolean(timeRange && timeRange.since && timeRange.until);
+  const cacheKey = isCustomRange ? `meta-${acct}-${timeRange.since}_${timeRange.until}` : `meta-${acct}`;
+  const ttl = isCustomRange ? 3600 : 15 * 60;
+  return cached(env, cacheKey, ttl, async () => {
     const u = new URL(`${GRAPH}/act_${acct}/insights`);
-    u.search = new URLSearchParams({
-      level: "campaign", date_preset: "today", limit: "50",
+    const params = {
+      level: "campaign", limit: "50",
       fields: "campaign_id,campaign_name,spend,actions,action_values",
       access_token: env.META_TOKEN,
-    });
+    };
+    if (isCustomRange) {
+      params.time_range = JSON.stringify({ since: timeRange.since, until: timeRange.until });
+    } else {
+      params.date_preset = "today";
+    }
+    u.search = new URLSearchParams(params);
     const r = await fetch(u);
     const out = await r.json();
     if (!r.ok || out.error) {

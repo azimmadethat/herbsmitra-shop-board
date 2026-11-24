@@ -5,8 +5,10 @@ export async function onRequestGet({ request, env }) {
   if (!authorised(request, env)) return json({ error: "This board link is missing its key." }, 401);
   try {
     const url = new URL(request.url);
-    const targetDate = url.searchParams.get("date") || null;
-    const raw = await snapshot(env, targetDate);
+    const date = url.searchParams.get("date") || null;
+    const startDate = url.searchParams.get("start_date") || url.searchParams.get("from") || date;
+    const endDate = url.searchParams.get("end_date") || url.searchParams.get("to") || null;
+    const raw = await snapshot(env, startDate, endDate);
     const s = { ...raw };
     delete s._hist;
     // The full orders-today list is only for the ops page (?full=1). The TV

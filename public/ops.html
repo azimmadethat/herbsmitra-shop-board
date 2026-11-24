@@ -91,8 +91,87 @@
   .nav-actions {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
     flex-wrap: wrap;
+  }
+  /* Date Filter Controls in Navbar */
+  .date-filter-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #f8fafc;
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    padding: 3px 6px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+    flex-wrap: wrap;
+  }
+  .date-mode-toggle {
+    display: inline-flex;
+    background: #e2e8f0;
+    border-radius: 6px;
+    padding: 2px;
+    gap: 2px;
+  }
+  .date-mode-btn {
+    border: none;
+    background: transparent;
+    padding: 3px 8px;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--muted);
+    border-radius: 5px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    font-family: inherit;
+    line-height: 1.2;
+  }
+  .date-mode-btn.active {
+    background: #ffffff;
+    color: var(--ink);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  }
+  .date-box {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .date-input {
+    border: 1px solid #cbd5e1;
+    background: #ffffff;
+    border-radius: 6px;
+    padding: 3px 6px;
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--ink);
+    outline: none;
+    cursor: pointer;
+  }
+  .date-input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(37,99,235,0.15);
+  }
+  .date-preset-select {
+    border: 1px solid #cbd5e1;
+    background: #ffffff;
+    border-radius: 6px;
+    padding: 3px 6px;
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--ink);
+    outline: none;
+    cursor: pointer;
+  }
+  .date-preset-select:focus {
+    border-color: var(--accent);
+  }
+  @media (max-width: 768px) {
+    .date-filter-group {
+      width: 100%;
+      justify-content: space-between;
+    }
   }
   .live-badge {
     display: inline-flex;
@@ -580,10 +659,38 @@
       </div>
     </div>
     <div class="nav-actions">
-      <div style="display:inline-flex;align-items:center;gap:6px;background:#f1f5f9;border:1px solid var(--border);border-radius:8px;padding:5px 10px;" title="Select date to inspect orders & revenue">
-        <span style="font-size:14px;">📅</span>
-        <input type="date" id="datePicker" style="border:none;background:transparent;font-family:inherit;font-size:13px;font-weight:600;color:var(--ink);outline:none;cursor:pointer;">
+      <div class="date-filter-group" title="Inspect single day or date range">
+        <div class="date-mode-toggle" title="Switch between Single Day and Date Range">
+          <button type="button" class="date-mode-btn active" id="modeSingleBtn">Single Day</button>
+          <button type="button" class="date-mode-btn" id="modeRangeBtn">Date Range</button>
+        </div>
+
+        <!-- Single Day Picker -->
+        <div class="date-box" id="singleDateBox" title="Pick a single date to inspect">
+          <input type="date" id="datePicker" class="date-input">
+        </div>
+
+        <!-- Date Range Pickers (Start Date & End Date) -->
+        <div class="date-box" id="rangeDateBox" style="display:none;" title="Select start and end dates">
+          <span style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;">From</span>
+          <input type="date" id="startDatePicker" class="date-input">
+          <span style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;">To</span>
+          <input type="date" id="endDatePicker" class="date-input">
+          <button type="button" class="btn btn-primary" id="applyRangeBtn" style="padding:4px 10px;font-size:12px;border-radius:6px;height:28px;">Apply</button>
+        </div>
+
+        <!-- Quick Presets Dropdown -->
+        <select id="quickRangeSelect" class="date-preset-select" title="Quick presets for common periods">
+          <option value="">⚡ Presets</option>
+          <option value="today">Today</option>
+          <option value="yesterday">Yesterday</option>
+          <option value="last7">Last 7 Days</option>
+          <option value="last30">Last 30 Days</option>
+          <option value="this_month">This Month</option>
+          <option value="last_month">Last Month</option>
+        </select>
       </div>
+
       <button class="btn btn-primary" id="liveTodayBtn" style="display:none;background:#16a34a;border-color:#16a34a;box-shadow:0 2px 8px rgba(22,163,74,0.3);">🔴 Live Today</button>
       <button class="btn btn-primary" id="bestDaysBtn" title="View Best Days as per orders in Calendar View" style="background:linear-gradient(135deg, #f59e0b, #d97706);border-color:#b45309;color:#fff;box-shadow:0 2px 8px rgba(245,158,11,0.25);font-weight:700;">🏆 Best Days Calendar</button>
       <span class="live-badge" id="live"><span class="dot"></span> <span id="livetxt">Live Sync</span></span>
@@ -775,10 +882,11 @@ function render(s) {
   state = s;
   hideLoading();
   if (s.store_name) $("store").textContent = s.store_name + " · Operations Command Center";
+  const isRange = Boolean(s.is_date_range);
   const isPast = Boolean(s.is_past_date);
-  $("date").textContent = isPast
-    ? `Historical Date: ${s.selected_date}`
-    : new Date().toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long" });
+  $("date").textContent = isRange
+    ? `Date Range: ${s.selected_date}`
+    : (isPast ? `Historical Date: ${s.selected_date}` : new Date().toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long" }));
   $("updated").textContent = "Updated " + new Date().toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit", second: "2-digit" });
 
   const rj = s.rejected || { cancelled: { orders: 0, amount: 0 }, refunded: { orders: 0, amount: 0 }, failed: { orders: 0, amount: 0 } };
@@ -788,7 +896,7 @@ function render(s) {
   const c = s.customers || { new: 0, returning: 0, guest: 0 };
   let totalRev = s.revenue || 0;
   let totalOrders = s.orders || 0;
-  if (!isPast) {
+  if (!isPast && !isRange) {
     if (totalRev < maxSeenOpsRev) totalRev = maxSeenOpsRev;
     else maxSeenOpsRev = totalRev;
     if (totalOrders < maxSeenOpsOrders) totalOrders = maxSeenOpsOrders;
@@ -798,31 +906,47 @@ function render(s) {
   const vsPct = s.vs_yesterday_pct;
 
   let vsText = "Yesterday ₹" + inr(s.yesterday_total);
-  if (vsPct !== null && vsPct !== undefined) {
+  if (isRange) {
+    const daysCount = (s.daily_history && s.daily_history.length) || 1;
+    vsText = `${daysCount} sales days in range`;
+  } else if (vsPct !== null && vsPct !== undefined) {
     vsText = `${vsPct >= 0 ? "▲" : "▼"} ${Math.abs(vsPct)}% ${vsPct >= 0 ? "ahead of" : "behind"} yesterday by now`;
   }
 
-  const salesTitle = isPast ? `Sales on ${s.selected_date}` : "Sales Today";
-  const salesSub = isPast ? `${s.orders || 0} orders on this date` : `${totalOrders} orders today`;
+  let salesTitle = "Sales Today";
+  let salesSub = `${totalOrders} orders today`;
+  if (isRange) {
+    salesTitle = `Sales in Range`;
+    salesSub = `${s.orders || 0} orders (${s.selected_date})`;
+  } else if (isPast) {
+    salesTitle = `Sales on ${s.selected_date}`;
+    salesSub = `${s.orders || 0} orders on this date`;
+  }
 
-  if (!isPast && s.date) {
+  if (!isPast && !isRange && s.date) {
     currentLiveDate = s.date;
     if ($("datePicker")) $("datePicker").max = currentLiveDate;
+    if ($("startDatePicker")) $("startDatePicker").max = currentLiveDate;
+    if ($("endDatePicker")) $("endDatePicker").max = currentLiveDate;
   }
   if ($("ordersTitle")) {
-    $("ordersTitle").textContent = isPast ? `All Orders on ${s.selected_date}` : "All Orders Today";
+    $("ordersTitle").textContent = isRange ? `All Orders (${s.selected_date})` : (isPast ? `All Orders on ${s.selected_date}` : "All Orders Today");
   }
   if ($("citiesTitle")) {
-    $("citiesTitle").textContent = isPast ? `Top Cities on ${s.selected_date}` : "Top Cities Today";
+    $("citiesTitle").textContent = isRange ? `Top Cities (${s.selected_date})` : (isPast ? `Top Cities on ${s.selected_date}` : "Top Cities Today");
   }
   if ($("productsTitle")) {
-    $("productsTitle").textContent = isPast ? `Top Products Sold on ${s.selected_date}` : "Top Products Selling Today";
+    $("productsTitle").textContent = isRange ? `Top Products Sold (${s.selected_date})` : (isPast ? `Top Products Sold on ${s.selected_date}` : "Top Products Selling Today");
   }
   if ($("liveTodayBtn")) {
-    $("liveTodayBtn").style.display = isPast ? "inline-flex" : "none";
+    $("liveTodayBtn").style.display = (isPast || isRange) ? "inline-flex" : "none";
   }
-  if ($("datePicker")) {
+  if (!isRange && $("datePicker")) {
     $("datePicker").value = isPast ? s.selected_date : currentLiveDate;
+  }
+  if (isRange) {
+    if ($("startDatePicker") && s.start_date) $("startDatePicker").value = s.start_date;
+    if ($("endDatePicker") && s.end_date) $("endDatePicker").value = s.end_date;
   }
 
   let metaSpendVal = "—";
@@ -838,13 +962,33 @@ function render(s) {
       metaSpendVal = "₹" + inr(s.spend);
       const roasTxt = s.roas_real ? `${s.roas_real.toFixed(2)}x Real ROAS` : "";
       const campsTxt = s.campaigns && s.campaigns.length ? `${s.campaigns.length} active campaigns` : "";
-      metaSpendDesc = [roasTxt, campsTxt].filter(Boolean).join(" · ") || "Active today";
+      metaSpendDesc = [roasTxt, campsTxt].filter(Boolean).join(" · ") || (isRange ? "Active in period" : "Active today");
       metaGood = Boolean(s.roas_real && s.roas_real >= (s.break_even || 2));
     } else {
       metaSpendVal = "₹0";
-      metaSpendDesc = "No spend yet today";
+      metaSpendDesc = isRange ? "No spend recorded in period" : "No spend yet today";
     }
   }
+
+  const card7Title = isRange ? "Range Best Day" : "Yesterday Total";
+  const card7Val = isRange
+    ? (s.month_best ? "₹" + inr(s.month_best.revenue) : "–")
+    : ("₹" + inr(s.yesterday_total));
+  const card7Sub = isRange
+    ? (s.month_best ? `${s.month_best.date} (highest day)` : "Single day peak")
+    : (s.projection ? "Heading for ~₹" + inr(s.projection) : "Full day sales");
+  const card7Icon = isRange ? "🏆" : "📈";
+
+  const daysActive = (s.daily_history && s.daily_history.length) || 1;
+  const avgDailyRev = totalOrders ? Math.round(totalRev / daysActive) : 0;
+  const card8Title = isRange ? "Avg Daily Sales" : "Month Best Day";
+  const card8Val = isRange
+    ? ("₹" + inr(avgDailyRev))
+    : (s.month_best ? "₹" + inr(s.month_best.revenue) : "-");
+  const card8Sub = isRange
+    ? (`Across ${daysActive} sales days`)
+    : (s.month_best ? s.month_best.date : "");
+  const card8Icon = isRange ? "📊" : "🏆";
 
   $("kpis").innerHTML =
     kpi(salesTitle, "₹" + inr(totalRev), salesSub, false, totalRev > 0, "💰") +
@@ -852,9 +996,9 @@ function render(s) {
     kpi("Cash On Delivery", p.cod.orders + " orders", "₹" + inr(p.cod.revenue), false, false, "💵") +
     kpi("Prepaid / Online", p.prepaid.orders + " orders", "₹" + inr(p.prepaid.revenue), false, false, "💳") +
     kpi("New Customers", c.new, `${c.returning} returning · ${c.guest || 0} guest`, false, c.new > 0, "🌱") +
-    kpi("Unfulfilled / Failed", badN + " orders", badAmt ? "₹" + inr(badAmt) + " lost" : "None today", badN > 0, badN === 0, "❌") +
-    kpi("Yesterday Total", "₹" + inr(s.yesterday_total), s.projection ? "Heading for ~₹" + inr(s.projection) : "Full day sales", false, false, "📈") +
-    kpi("Month Best Day", s.month_best ? "₹" + inr(s.month_best.revenue) : "-", s.month_best ? s.month_best.date : "", false, false, "🏆") +
+    kpi("Unfulfilled / Failed", badN + " orders", badAmt ? "₹" + inr(badAmt) + " lost" : "None in period", badN > 0, badN === 0, "❌") +
+    kpi(card7Title, card7Val, card7Sub, false, false, card7Icon) +
+    kpi(card8Title, card8Val, card8Sub, false, false, card8Icon) +
     kpi("Meta Ad Spend", metaSpendVal, metaSpendDesc, metaBad, metaGood, '<img src="/meta-sunrise.png?v=2" alt="Meta" style="width:18px;height:18px;object-fit:contain;vertical-align:middle;display:inline-block;border-radius:3px;">', 'style="cursor:pointer;" onclick="document.getElementById(\'meta-section\')?.scrollIntoView({behavior:\'smooth\'})" title="Click to view Meta Campaigns breakdown"');
 
   const st = s.statuses || {};
@@ -955,7 +1099,7 @@ function renderOrders() {
     const isCod = /cod|cash\s*on\s*delivery/i.test(o.pay || "");
     const payBadge = isCod ? `<span class="badge pay" style="border-color:#f59e0b;color:#b45309;">💵 COD</span>` : `<span class="badge pay" style="border-color:#3b82f6;color:#1d4ed8;">💳 Prepaid</span>`;
     return `<tr>
-      <td class="order-time">${esc(o.at)}</td>
+      <td class="order-time">${o.date ? `<span style="display:block;font-size:10px;color:var(--muted);font-weight:600;">${esc(o.date)}</span>` : ""}${esc(o.at)}</td>
       <td class="order-id">${esc(o.name)}</td>
       <td><b>${esc(o.first || "Customer")}</b></td>
       <td>${esc(o.city || "–")}</td>
@@ -1304,9 +1448,81 @@ function getLocalDateStr() {
   const d = new Date(Date.now() + (5.5 * 3600 * 1000));
   return d.toISOString().slice(0, 10);
 }
+
+function addDaysStr(dateStr, days) {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  dt.setUTCDate(dt.getUTCDate() + days);
+  return dt.toISOString().slice(0, 10);
+}
+
+function getLastMonthRange(dateStr) {
+  const [y, m] = dateStr.split("-").map(Number);
+  const lastMonthEnd = new Date(Date.UTC(y, m - 1, 0));
+  const lastMonthStart = new Date(Date.UTC(lastMonthEnd.getUTCFullYear(), lastMonthEnd.getUTCMonth(), 1));
+  return {
+    from: lastMonthStart.toISOString().slice(0, 10),
+    to: lastMonthEnd.toISOString().slice(0, 10)
+  };
+}
+
+function getThisMonthRange(dateStr) {
+  return {
+    from: dateStr.slice(0, 8) + "01",
+    to: dateStr
+  };
+}
+
 let currentLiveDate = getLocalDateStr();
 let selectedDate = null;
+let selectedStartDate = null;
+let selectedEndDate = null;
+let dateMode = "single";
 let pollTimer = null;
+
+function setDateMode(mode) {
+  dateMode = mode;
+  if (mode === "range") {
+    if ($("modeRangeBtn")) $("modeRangeBtn").classList.add("active");
+    if ($("modeSingleBtn")) $("modeSingleBtn").classList.remove("active");
+    if ($("singleDateBox")) $("singleDateBox").style.display = "none";
+    if ($("rangeDateBox")) $("rangeDateBox").style.display = "inline-flex";
+    if ($("startDatePicker") && !$("startDatePicker").value) {
+      $("startDatePicker").value = currentLiveDate.slice(0, 8) + "01";
+    }
+    if ($("endDatePicker") && !$("endDatePicker").value) {
+      $("endDatePicker").value = currentLiveDate;
+    }
+  } else {
+    if ($("modeSingleBtn")) $("modeSingleBtn").classList.add("active");
+    if ($("modeRangeBtn")) $("modeRangeBtn").classList.remove("active");
+    if ($("rangeDateBox")) $("rangeDateBox").style.display = "none";
+    if ($("singleDateBox")) $("singleDateBox").style.display = "inline-flex";
+  }
+}
+
+if ($("modeSingleBtn")) {
+  $("modeSingleBtn").addEventListener("click", () => {
+    setDateMode("single");
+    if (selectedStartDate || selectedEndDate) {
+      selectedDate = selectedEndDate || currentLiveDate;
+      selectedStartDate = null;
+      selectedEndDate = null;
+      if ($("datePicker")) $("datePicker").value = selectedDate;
+      if (selectedDate === currentLiveDate) resetToLive();
+      else {
+        showLoading(`Loading Archive for ${selectedDate}…`, `Fetching orders for ${selectedDate}`);
+        poll(true);
+      }
+    }
+  });
+}
+
+if ($("modeRangeBtn")) {
+  $("modeRangeBtn").addEventListener("click", () => {
+    setDateMode("range");
+  });
+}
 
 if ($("datePicker")) {
   $("datePicker").max = currentLiveDate;
@@ -1317,6 +1533,8 @@ if ($("datePicker")) {
       resetToLive();
     } else {
       selectedDate = val;
+      selectedStartDate = null;
+      selectedEndDate = null;
       if ($("liveTodayBtn")) $("liveTodayBtn").style.display = "inline-flex";
       showLoading(`Loading Archive for ${val}…`, `Fetching orders and performance for ${val}`);
       poll(true);
@@ -1324,8 +1542,104 @@ if ($("datePicker")) {
   });
 }
 
+if ($("startDatePicker")) $("startDatePicker").max = currentLiveDate;
+if ($("endDatePicker")) $("endDatePicker").max = currentLiveDate;
+
+if ($("applyRangeBtn")) {
+  $("applyRangeBtn").addEventListener("click", () => {
+    let from = $("startDatePicker").value;
+    let to = $("endDatePicker").value;
+    if (!from || !to) return;
+    if (from > to) {
+      const tmp = from; from = to; to = tmp;
+      $("startDatePicker").value = from;
+      $("endDatePicker").value = to;
+    }
+    if (from === to && from === currentLiveDate) {
+      resetToLive();
+      return;
+    }
+    selectedStartDate = from;
+    selectedEndDate = to;
+    selectedDate = null;
+    if ($("liveTodayBtn")) $("liveTodayBtn").style.display = "inline-flex";
+    showLoading(`Loading Range (${from} to ${to})…`, "Fetching orders and revenue for period");
+    poll(true);
+  });
+}
+
+if ($("quickRangeSelect")) {
+  $("quickRangeSelect").addEventListener("change", e => {
+    const val = e.target.value;
+    if (!val) return;
+    if (val === "today") {
+      resetToLive();
+    } else if (val === "yesterday") {
+      const y = addDaysStr(currentLiveDate, -1);
+      setDateMode("single");
+      selectedDate = y;
+      selectedStartDate = null;
+      selectedEndDate = null;
+      if ($("datePicker")) $("datePicker").value = y;
+      if ($("liveTodayBtn")) $("liveTodayBtn").style.display = "inline-flex";
+      showLoading(`Loading Yesterday (${y})…`, "Fetching orders and revenue");
+      poll(true);
+    } else if (val === "last7") {
+      const from = addDaysStr(currentLiveDate, -6);
+      const to = currentLiveDate;
+      setDateMode("range");
+      if ($("startDatePicker")) $("startDatePicker").value = from;
+      if ($("endDatePicker")) $("endDatePicker").value = to;
+      selectedStartDate = from;
+      selectedEndDate = to;
+      selectedDate = null;
+      if ($("liveTodayBtn")) $("liveTodayBtn").style.display = "inline-flex";
+      showLoading(`Loading Last 7 Days (${from} to ${to})…`, "Fetching orders and revenue");
+      poll(true);
+    } else if (val === "last30") {
+      const from = addDaysStr(currentLiveDate, -29);
+      const to = currentLiveDate;
+      setDateMode("range");
+      if ($("startDatePicker")) $("startDatePicker").value = from;
+      if ($("endDatePicker")) $("endDatePicker").value = to;
+      selectedStartDate = from;
+      selectedEndDate = to;
+      selectedDate = null;
+      if ($("liveTodayBtn")) $("liveTodayBtn").style.display = "inline-flex";
+      showLoading(`Loading Last 30 Days (${from} to ${to})…`, "Fetching orders and revenue");
+      poll(true);
+    } else if (val === "this_month") {
+      const tm = getThisMonthRange(currentLiveDate);
+      setDateMode("range");
+      if ($("startDatePicker")) $("startDatePicker").value = tm.from;
+      if ($("endDatePicker")) $("endDatePicker").value = tm.to;
+      selectedStartDate = tm.from;
+      selectedEndDate = tm.to;
+      selectedDate = null;
+      if ($("liveTodayBtn")) $("liveTodayBtn").style.display = "inline-flex";
+      showLoading(`Loading This Month (${tm.from} to ${tm.to})…`, "Fetching month's total data");
+      poll(true);
+    } else if (val === "last_month") {
+      const lm = getLastMonthRange(currentLiveDate);
+      setDateMode("range");
+      if ($("startDatePicker")) $("startDatePicker").value = lm.from;
+      if ($("endDatePicker")) $("endDatePicker").value = lm.to;
+      selectedStartDate = lm.from;
+      selectedEndDate = lm.to;
+      selectedDate = null;
+      if ($("liveTodayBtn")) $("liveTodayBtn").style.display = "inline-flex";
+      showLoading(`Loading Last Month (${lm.from} to ${lm.to})…`, "Fetching full month's data");
+      poll(true);
+    }
+    e.target.value = "";
+  });
+}
+
 function resetToLive() {
   selectedDate = null;
+  selectedStartDate = null;
+  selectedEndDate = null;
+  setDateMode("single");
   if ($("datePicker")) $("datePicker").value = currentLiveDate;
   if ($("liveTodayBtn")) $("liveTodayBtn").style.display = "none";
   showLoading("Loading Live Operations Board…", "Connecting live to WooCommerce store and Meta Ads");
@@ -1346,20 +1660,29 @@ async function poll(manual) {
   if (pollTimer) { clearTimeout(pollTimer); pollTimer = null; }
   try {
     if (manual) $("updated").textContent = "Refreshing…";
-    const endpoint = selectedDate
-      ? `/api/state?full=1&date=${encodeURIComponent(selectedDate)}&k=${encodeURIComponent(KEY)}`
-      : `/api/state?full=1&k=${encodeURIComponent(KEY)}`;
+    let endpoint = `/api/state?full=1&k=${encodeURIComponent(KEY)}`;
+    if (selectedStartDate && selectedEndDate) {
+      endpoint += `&start_date=${encodeURIComponent(selectedStartDate)}&end_date=${encodeURIComponent(selectedEndDate)}`;
+    } else if (selectedDate) {
+      endpoint += `&date=${encodeURIComponent(selectedDate)}`;
+    }
     const r = await fetch(endpoint, { cache: "no-store" });
     const s = await r.json();
     if (!r.ok) throw new Error(s.error || "HTTP " + r.status);
     $("live").classList.remove("off");
-    $("livetxt").textContent = selectedDate ? `Archive (${selectedDate})` : "Live Sync";
+    if (selectedStartDate && selectedEndDate) {
+      $("livetxt").textContent = `Range (${selectedStartDate} to ${selectedEndDate})`;
+    } else if (selectedDate) {
+      $("livetxt").textContent = `Archive (${selectedDate})`;
+    } else {
+      $("livetxt").textContent = "Live Sync";
+    }
     render(s);
   } catch (e) {
     $("live").classList.add("off");
     $("livetxt").textContent = "Reconnecting";
   }
-  if (!manual) pollTimer = setTimeout(poll, selectedDate ? 60000 : 45000);
+  if (!manual) pollTimer = setTimeout(poll, (selectedDate || (selectedStartDate && selectedEndDate)) ? 60000 : 45000);
 }
 
 $("search").addEventListener("input", renderOrders);
