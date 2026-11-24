@@ -96,8 +96,8 @@ export async function wooRawWithRetry(env, path, params = {}, retries = 2) {
 }
 
 /** All orders in a date window, paged concurrently in parallel. `fields` keeps the payloads small. */
-async function wooOrders(env, { after, before, fields, maxPages = 30 }) {
-  const params = { per_page: 100, page: 1, order: "asc", orderby: "date", status: "any", _fields: fields };
+async function wooOrders(env, { after, before, fields, maxPages = 30, order = "asc" }) {
+  const params = { per_page: 100, page: 1, order, orderby: "date", status: "any", _fields: fields };
   if (after) params.after = after;
   if (before) params.before = before;
 
@@ -170,10 +170,12 @@ async function ordersForDay(env, targetDate, storeName, tz) {
 async function history(env, today, storeName, tz) {
   return cached(env, `hist-woo-${wooBase(env)}-${today}`, 30 * 60, async () => {
     try {
-      const from = addDays(today, -HISTORY_DAYS);
+      const yday = addDays(today, -1);
+      const from = addDays(today, -14);
+      // Fetch recent days first with order: "desc" so latest dates and yesterday are prioritized
       const light = await wooOrders(env, {
         after: from + "T00:00:00", before: today + "T00:00:00",
-        fields: "date_created_gmt,total,status", maxPages: 20,
+        fields: "date_created_gmt,total,status", maxPages: 25, order: "desc",
       });
       const hours = {}, orders = {};
       for (const o of light) {
@@ -182,21 +184,26 @@ async function history(env, today, storeName, tz) {
         (hours[at.date] = hours[at.date] || Array(24).fill(0))[at.hour] += parseFloat(o.total) || 0;
         orders[at.date] = (orders[at.date] || 0) + 1;
       }
-      // Product history only for yesterday: it feeds the "sold again after a
-      // dry spell" insight and the morning greeting. Older days keep empty
-      // product maps, which the insight code already handles.
+
+      // Explicitly ensure yesterday (yday) is 100% complete with all items & hours:
       const items = {};
-      const yday = addDays(today, -1);
       const yOrders = await wooOrders(env, {
-        after: yday + "T00:00:00", before: today + "T00:00:00",
-        fields: "date_created_gmt,total,status,line_items", maxPages: 4,
+        after: addDays(yday, -1) + "T23:00:00", before: today + "T01:00:00",
+        fields: "date_created_gmt,total,status,line_items", maxPages: 10, order: "desc",
       });
       const dayItems = {};
+      hours[yday] = Array(24).fill(0);
+      orders[yday] = 0;
       for (const o of yOrders) {
         if (CANCELLED_STATUSES.has(String(o.status || "").toLowerCase())) continue;
-        for (const li of o.line_items || []) {
-          const n = shortName(li.name, storeName);
-          dayItems[n] = (dayItems[n] || 0) + (li.quantity || 1);
+        const at = local(new Date(o.date_created_gmt + "Z"), tz);
+        if (at.date === yday) {
+          hours[yday][at.hour] += parseFloat(o.total) || 0;
+          orders[yday] = (orders[yday] || 0) + 1;
+          for (const li of o.line_items || []) {
+            const n = shortName(li.name, storeName);
+            dayItems[n] = (dayItems[n] || 0) + (li.quantity || 1);
+          }
         }
       }
       items[yday] = dayItems;

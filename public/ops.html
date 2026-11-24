@@ -624,7 +624,7 @@
   <div class="cols">
     <div>
       <div class="section-header">
-        <div class="section-title">📍 Top Cities Today</div>
+        <div class="section-title">📍 <span id="citiesTitle">Top Cities Today</span></div>
       </div>
       <div class="table-card scroll-wrap">
         <table id="cities"><tbody></tbody></table>
@@ -634,7 +634,7 @@
 
     <div>
       <div class="section-header">
-        <div class="section-title">🛍️ Top Products Selling Today</div>
+        <div class="section-title">🛍️ <span id="productsTitle">Top Products Selling Today</span></div>
       </div>
       <div class="table-card scroll-wrap">
         <table id="products"><tbody></tbody></table>
@@ -646,7 +646,7 @@
   <!-- All Orders List -->
   <section>
     <div class="section-header">
-      <div class="section-title">📋 All Orders Today <span class="section-sub" id="orderCount" style="margin-left:6px"></span></div>
+      <div class="section-title">📋 <span id="ordersTitle">All Orders Today</span> <span class="section-sub" id="orderCount" style="margin-left:6px"></span></div>
       <button class="btn" id="resetFilterBtn" style="padding:4px 10px;font-size:12px;display:none;">Clear Filters</button>
     </div>
 
@@ -804,6 +804,26 @@ function render(s) {
 
   const salesTitle = isPast ? `Sales on ${s.selected_date}` : "Sales Today";
   const salesSub = isPast ? `${s.orders || 0} orders on this date` : `${totalOrders} orders today`;
+
+  if (!isPast && s.date) {
+    currentLiveDate = s.date;
+    if ($("datePicker")) $("datePicker").max = currentLiveDate;
+  }
+  if ($("ordersTitle")) {
+    $("ordersTitle").textContent = isPast ? `All Orders on ${s.selected_date}` : "All Orders Today";
+  }
+  if ($("citiesTitle")) {
+    $("citiesTitle").textContent = isPast ? `Top Cities on ${s.selected_date}` : "Top Cities Today";
+  }
+  if ($("productsTitle")) {
+    $("productsTitle").textContent = isPast ? `Top Products Sold on ${s.selected_date}` : "Top Products Selling Today";
+  }
+  if ($("liveTodayBtn")) {
+    $("liveTodayBtn").style.display = isPast ? "inline-flex" : "none";
+  }
+  if ($("datePicker")) {
+    $("datePicker").value = isPast ? s.selected_date : currentLiveDate;
+  }
 
   let metaSpendVal = "—";
   let metaSpendDesc = "Not connected";
@@ -995,11 +1015,15 @@ function closeBestDaysCalendar() {
 
 function openBestDaysCalendar(onSelectDate) {
   const handler = onSelectDate || (d => {
-    selectedDate = d;
-    if ($("datePicker")) $("datePicker").value = d;
-    if ($("liveTodayBtn")) $("liveTodayBtn").style.display = "inline-flex";
-    showLoading(`Loading Archive for ${d}…`, `Fetching orders and performance for ${d}`);
-    poll(true);
+    if (d === currentLiveDate) {
+      resetToLive();
+    } else {
+      selectedDate = d;
+      if ($("datePicker")) $("datePicker").value = d;
+      if ($("liveTodayBtn")) $("liveTodayBtn").style.display = "inline-flex";
+      showLoading(`Loading Archive for ${d}…`, `Fetching orders and performance for ${d}`);
+      poll(true);
+    }
   });
 
   let modal = document.getElementById("best-days-modal");
@@ -1276,18 +1300,24 @@ if ($("bestDaysBtn")) {
   $("bestDaysBtn").addEventListener("click", () => openBestDaysCalendar());
 }
 
+function getLocalDateStr() {
+  const d = new Date(Date.now() + (5.5 * 3600 * 1000));
+  return d.toISOString().slice(0, 10);
+}
+let currentLiveDate = getLocalDateStr();
 let selectedDate = null;
 let pollTimer = null;
-const todayISO = new Date().toISOString().slice(0, 10);
+
 if ($("datePicker")) {
-  $("datePicker").max = todayISO;
+  $("datePicker").max = currentLiveDate;
+  $("datePicker").value = currentLiveDate;
   $("datePicker").addEventListener("change", e => {
     const val = e.target.value;
-    if (!val || val === todayISO) {
+    if (!val || val === currentLiveDate) {
       resetToLive();
     } else {
       selectedDate = val;
-      $("liveTodayBtn").style.display = "inline-flex";
+      if ($("liveTodayBtn")) $("liveTodayBtn").style.display = "inline-flex";
       showLoading(`Loading Archive for ${val}…`, `Fetching orders and performance for ${val}`);
       poll(true);
     }
@@ -1296,7 +1326,7 @@ if ($("datePicker")) {
 
 function resetToLive() {
   selectedDate = null;
-  if ($("datePicker")) $("datePicker").value = "";
+  if ($("datePicker")) $("datePicker").value = currentLiveDate;
   if ($("liveTodayBtn")) $("liveTodayBtn").style.display = "none";
   showLoading("Loading Live Operations Board…", "Connecting live to WooCommerce store and Meta Ads");
   poll(true);
