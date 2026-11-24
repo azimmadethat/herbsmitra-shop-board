@@ -612,7 +612,7 @@
   </section>
 
   <!-- Meta Ads -->
-  <section>
+  <section id="meta-section">
     <div class="section-header">
       <div class="section-title">🎯 Meta Ads Intelligence</div>
     </div>
@@ -651,8 +651,8 @@ const STATUS_LABEL = { pending: "Pending", processing: "Processing", "on-hold": 
 let state = null;
 let activeStatusFilter = "";
 
-function kpi(k, v, d, bad, good, icon) {
-  return `<div class="kpi-card${bad ? " bad" : ""}${good ? " good" : ""}">
+function kpi(k, v, d, bad, good, icon, extraAttrs = "") {
+  return `<div class="kpi-card${bad ? " bad" : ""}${good ? " good" : ""}" ${extraAttrs}>
     <div class="kpi-head"><span class="kpi-k">${k}</span><span class="kpi-icon">${icon || ""}</span></div>
     <div class="kpi-v">${v}</div>
     ${d ? `<div class="kpi-d">${d}</div>` : ""}
@@ -684,6 +684,27 @@ function render(s) {
   const salesTitle = isPast ? `Sales on ${s.selected_date}` : "Sales Today";
   const salesSub = isPast ? `${s.orders || 0} orders on this date` : `${s.orders || 0} orders today`;
 
+  let metaSpendVal = "—";
+  let metaSpendDesc = "Not connected";
+  let metaGood = false;
+  let metaBad = false;
+  if (s.meta_on) {
+    if (s.meta_error) {
+      metaSpendVal = "Error";
+      metaSpendDesc = esc(s.meta_error);
+      metaBad = true;
+    } else if (s.spend) {
+      metaSpendVal = "₹" + inr(s.spend);
+      const roasTxt = s.roas_real ? `${s.roas_real.toFixed(2)}x Real ROAS` : "";
+      const campsTxt = s.campaigns && s.campaigns.length ? `${s.campaigns.length} active campaigns` : "";
+      metaSpendDesc = [roasTxt, campsTxt].filter(Boolean).join(" · ") || "Active today";
+      metaGood = Boolean(s.roas_real && s.roas_real >= (s.break_even || 2));
+    } else {
+      metaSpendVal = "₹0";
+      metaSpendDesc = "No spend yet today";
+    }
+  }
+
   $("kpis").innerHTML =
     kpi(salesTitle, "₹" + inr(totalRev), salesSub, false, totalRev > 0, "💰") +
     kpi("Per Order (AOV)", "₹" + inr(s.aov), vsText, vsPct !== null && vsPct < 0, vsPct !== null && vsPct > 0, "🏷️") +
@@ -692,7 +713,8 @@ function render(s) {
     kpi("New Customers", c.new, `${c.returning} returning · ${c.guest || 0} guest`, false, c.new > 0, "🌱") +
     kpi("Unfulfilled / Failed", badN + " orders", badAmt ? "₹" + inr(badAmt) + " lost" : "None today", badN > 0, badN === 0, "❌") +
     kpi("Yesterday Total", "₹" + inr(s.yesterday_total), s.projection ? "Heading for ~₹" + inr(s.projection) : "Full day sales", false, false, "📈") +
-    kpi("Month Best Day", s.month_best ? "₹" + inr(s.month_best.revenue) : "-", s.month_best ? s.month_best.date : "", false, false, "🏆");
+    kpi("Month Best Day", s.month_best ? "₹" + inr(s.month_best.revenue) : "-", s.month_best ? s.month_best.date : "", false, false, "🏆") +
+    kpi("Meta Ad Spend", metaSpendVal, metaSpendDesc, metaBad, metaGood, '<img src="/meta-sunrise.png" alt="Meta" style="width:18px;height:18px;object-fit:contain;vertical-align:middle;display:inline-block;border-radius:3px;">', 'style="cursor:pointer;" onclick="document.getElementById(\'meta-section\')?.scrollIntoView({behavior:\'smooth\'})" title="Click to view Meta Campaigns breakdown"');
 
   const st = s.statuses || {};
   $("pipeline").innerHTML = ["pending", "processing", "on-hold", "completed", "cancelled", "refunded", "failed"].map(k => {
