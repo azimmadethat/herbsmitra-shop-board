@@ -154,7 +154,7 @@ function render(s) {
   if (s.spend) {
     const r = s.roas_real, early = s.spend < 1500;
     $("roas").innerHTML = `${r.toFixed(2)}<small>x</small>`;
-    $("weather").innerHTML = early ? META_SUNRISE_ICON : r >= be * 1.3 ? "☀️" : r >= be ? "🌤️" : r >= be * .75 ? "☁️" : "🌧️";
+    $("weather").innerHTML = META_SUNRISE_ICON;
     $("roasnote").textContent = early ? "too early to tell, the day just started" : `real sales ÷ ad spend · break-even ${be}`;
     // Meta pulls run every 15 min; anything much older means the connection is down.
     if (s.meta_age_min !== null && s.meta_age_min > 40) {   // pulls run every 15 min
