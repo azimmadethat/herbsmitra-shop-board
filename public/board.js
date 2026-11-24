@@ -497,7 +497,7 @@ addEventListener("keydown", e => {
     location.href = API + "/?design=" + next + (KEY ? "&k=" + encodeURIComponent(KEY) : "");
   }
 });
-const DESIGNS = ["apple", "meta", "herbsmitra", "classic", "studio", "garden", "swiss", "night"];
+const DESIGNS = ["classic", "meta", "apple", "studio", "swiss"];
 
 /* ---------- live connection + date selection ---------- */
 // Asks the server for fresh numbers every 20 seconds (or for the chosen historical date).
@@ -1283,14 +1283,11 @@ function initHUD() {
       <div class="hud-section">
         <div class="hud-lbl">Theme Design</div>
         <select id="hud-design-select" title="Switch Theme">
-          <option value="herbsmitra">🌿 HerbsMitra</option>
-          <option value="apple">🍏 Apple</option>
-          <option value="meta">🔷 Meta</option>
           <option value="classic">🥭 Classic</option>
+          <option value="meta">🔷 Meta</option>
+          <option value="apple">🍏 Apple</option>
           <option value="studio">💻 Studio</option>
-          <option value="garden">🌸 Garden</option>
           <option value="swiss">🇨🇭 Swiss</option>
-          <option value="night">🌙 Night</option>
         </select>
       </div>
 
@@ -1316,7 +1313,7 @@ function initHUD() {
       <div class="hud-section">
         <div class="hud-lbl">Quick Actions</div>
         <div class="hud-btn-grid">
-          <a class="hud-act-btn" id="hud-ops-btn" href="/ops.html" title="Open All Orders Operations Dashboard">📋 Ops Board</a>
+          <a class="hud-act-btn" id="hud-ops-btn" href="/ops.html" title="Open All Orders Operations Dashboard">📋 OPS BOARD</a>
           <button class="hud-act-btn" id="hud-test-btn" title="Simulate a real order with sound & confetti (T)">🧪 Test Order</button>
           <button class="hud-act-btn" id="hud-sound-toggle-btn" title="Toggle sound status">🔊 Sound: On</button>
           <button class="hud-act-btn" id="hud-fs-btn" title="Toggle Fullscreen (F)">⛶ Fullscreen</button>

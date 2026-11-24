@@ -48,10 +48,45 @@ header { grid-column: 1 / -1; display: flex; align-items: center; justify-conten
 .opener { text-align: center; flex: 1; padding: 0 40px; }
 .opener h1 { font-size: 46px; line-height: 1.05; font-weight: 800; letter-spacing: -.5px; }
 .opener p { font-size: 26px; color: var(--soft); font-weight: 500; margin-top: 4px; }
-.live { font-size: 24px; color: var(--soft); display: flex; align-items: center; gap: 10px; }
-.live .dot { width: 14px; height: 14px; border-radius: 50%; background: var(--good); box-shadow: 0 0 0 0 var(--good); animation: pulse 2s infinite; }
-.live.off .dot { background: var(--bad); animation: none; }
-@keyframes pulse { 70% { box-shadow: 0 0 0 14px transparent; } }
+.live {
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: #ffffff !important;
+  background: #16a34a !important;
+  padding: 6px 18px 6px 14px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 2px 10px rgba(22, 163, 74, 0.4);
+  line-height: 1;
+  transition: all 0.2s ease;
+}
+.live .dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #ffffff !important;
+  box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.8);
+  animation: livepulse 1.8s infinite;
+  flex-shrink: 0;
+}
+.live.off {
+  background: #dc2626 !important;
+  box-shadow: 0 2px 10px rgba(220, 38, 38, 0.4);
+}
+.live.off .dot {
+  background: rgba(255, 255, 255, 0.8) !important;
+  animation: none;
+  box-shadow: none;
+}
+@keyframes livepulse {
+  0% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.8); }
+  70% { box-shadow: 0 0 0 8px transparent; }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
 
 .top-ops-btn {
   display: inline-flex; align-items: center; gap: 8px;
@@ -230,18 +265,23 @@ footer .tag { font-size: 24px; font-weight: 800; color: var(--soft); text-transf
   }
 
   .top-ops-btn {
-    font-size: 14px;
-    padding: 7px 18px;
-    gap: 6px;
+    font-size: 13px !important;
+    padding: 6px 16px !important;
+    gap: 6px !important;
+    font-weight: 800 !important;
+    letter-spacing: 0.5px !important;
   }
 
   .live {
-    font-size: 14px;
-    gap: 8px;
+    font-size: 12px !important;
+    font-weight: 800 !important;
+    padding: 5px 12px 5px 10px !important;
+    gap: 6px !important;
+    letter-spacing: 0.8px !important;
   }
   .live .dot {
-    width: 10px;
-    height: 10px;
+    width: 6px !important;
+    height: 6px !important;
   }
 
   .card {
@@ -451,17 +491,35 @@ footer .tag { font-size: 24px; font-weight: 800; color: var(--soft); text-transf
     flex-shrink: 0;
   }
 
+  /* Optimized Mobile Notification Banner */
   #toast {
-    top: 16px;
-    padding: 14px 18px;
-    border-radius: 18px;
-    gap: 12px;
-    max-width: calc(100vw - 28px);
+    position: fixed !important;
+    left: 50% !important;
+    top: 14px !important;
+    transform: translate(-50%, -160%) scale(0.96) !important;
+    width: calc(100vw - 24px) !important;
+    max-width: 440px !important;
+    padding: 12px 16px !important;
+    border-radius: 20px !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 12px !important;
+    box-shadow: 0 16px 40px rgba(0,0,0,0.25) !important;
+    z-index: 9999 !important;
+    box-sizing: border-box !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    transition: transform 0.42s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease !important;
   }
-  #toast .big { font-size: 36px; }
-  #toast h2 { font-size: 18px; }
-  #toast p { font-size: 13px; }
-  #toast .amt { font-size: 22px; margin-left: 6px; }
+  #toast.show {
+    transform: translate(-50%, 0) scale(1) !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+  }
+  #toast .big { font-size: 32px !important; line-height: 1 !important; }
+  #toast h2 { font-size: 15px !important; font-weight: 700 !important; white-space: nowrap !important; margin: 0 !important; }
+  #toast p { font-size: 13px !important; white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important; max-width: 180px !important; margin: 0 !important; }
+  #toast .amt { font-size: 20px !important; font-weight: 800 !important; margin-left: auto !important; }
 
   #milestone div {
     padding: 24px 32px;
@@ -497,7 +555,7 @@ footer .tag { font-size: 24px; font-weight: 800; color: var(--soft); text-transf
     <div class="clock" id="clock"></div>
     <div class="opener"><h1 id="headline">Good to see you!</h1><p id="subline">Warming up the numbers…</p></div>
     <div style="display:flex;align-items:center;gap:18px;">
-      <a id="top-ops-btn" href="/ops.html" class="top-ops-btn" title="Quickly open Operations & All Orders Dashboard">📋 Ops Board</a>
+      <a id="top-ops-btn" href="/ops.html" class="top-ops-btn" title="Quickly open Operations & All Orders Dashboard">📋 OPS BOARD</a>
       <div class="live" id="live"><span class="dot"></span><span id="livetxt">connecting</span></div>
     </div>
   </header>

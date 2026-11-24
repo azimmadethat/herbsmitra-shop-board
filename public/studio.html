@@ -56,9 +56,57 @@ body { font-family: "Inter", -apple-system, system-ui, sans-serif; color: var(--
 .seg span.on { background: #fff; color: var(--ink); box-shadow: 0 1px 3px rgba(0,0,0,.12); }
 #clock { margin-left: auto; font-size: 19px; color: var(--dim); }
 #clock b { color: var(--ink); font-weight: 600; }
-.live { display: flex; align-items: center; gap: 8px; font-size: 17px; color: var(--dim); }
-.live .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--green); box-shadow: 0 0 0 0 rgba(48,164,108,.5); animation: ping 2s infinite; }
-@keyframes ping { 70% { box-shadow: 0 0 0 9px rgba(48,164,108,0); } }
+.top-ops-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 16px; border-radius: 999px;
+  background: rgba(0,0,0,0.06); border: 1px solid var(--line);
+  color: var(--ink); font-family: inherit; font-size: 14px; font-weight: 800;
+  text-transform: uppercase; letter-spacing: 0.5px;
+  text-decoration: none; cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+.top-ops-btn:hover { background: var(--blue); color: #fff; border-color: var(--blue); }
+
+.live {
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: #ffffff !important;
+  background: #16a34a !important;
+  padding: 5px 14px 5px 10px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  box-shadow: 0 2px 10px rgba(22, 163, 74, 0.4);
+  line-height: 1;
+  transition: all 0.2s ease;
+}
+.live .dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #ffffff !important;
+  box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.8);
+  animation: livepulse 1.8s infinite;
+  flex-shrink: 0;
+}
+.live.off {
+  background: #dc2626 !important;
+  box-shadow: 0 2px 10px rgba(220, 38, 38, 0.4);
+}
+.live.off .dot {
+  background: rgba(255, 255, 255, 0.8) !important;
+  animation: none;
+  box-shadow: none;
+}
+@keyframes livepulse {
+  0% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.8); }
+  70% { box-shadow: 0 0 0 7px transparent; }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
 
 .body { flex: 1; padding: 30px 36px 32px; display: grid; grid-template-columns: 1fr 1fr 1fr; grid-template-rows: auto 1fr 290px; gap: 22px; min-height: 0; }
 .hero { grid-column: 1 / -1; display: flex; align-items: flex-end; gap: 40px; }
@@ -133,6 +181,219 @@ body { font-family: "Inter", -apple-system, system-ui, sans-serif; color: var(--
 #unlock.show { display: grid; }
 #unlock div { background: #fff; border-radius: 20px; padding: 30px 44px; font-size: 26px; font-weight: 600; text-align: center; }
 #unlock small { display: block; font-size: 17px; font-weight: 400; color: var(--dim); margin-top: 6px; }
+@media (max-width: 900px) {
+  html, body {
+    width: 100%;
+    height: auto;
+    min-height: 100%;
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  #stage {
+    position: relative !important;
+    left: auto !important;
+    top: auto !important;
+    transform: none !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    min-height: 100vh;
+    padding: 12px 10px 40px !important;
+    display: flex !important;
+    flex-direction: column !important;
+  }
+
+  .win {
+    position: relative !important;
+    left: 0 !important;
+    top: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: 100% !important;
+    border-radius: 18px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.1) !important;
+  }
+
+  .side {
+    display: none !important;
+  }
+
+  .bar {
+    height: auto !important;
+    padding: 14px 16px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 10px !important;
+    align-items: center !important;
+    text-align: center !important;
+  }
+
+  .bar h1 {
+    font-size: 18px !important;
+  }
+
+  .seg {
+    margin-left: 0 !important;
+  }
+
+  #clock {
+    margin-left: 0 !important;
+    font-size: 14px !important;
+  }
+
+  .top-ops-btn {
+    font-size: 13px !important;
+    padding: 6px 16px !important;
+    letter-spacing: 0.5px !important;
+  }
+
+  .live {
+    font-size: 12px !important;
+    padding: 5px 12px 5px 10px !important;
+    letter-spacing: 0.8px !important;
+  }
+  .live .dot {
+    width: 6px !important;
+    height: 6px !important;
+  }
+
+  .body {
+    padding: 16px 14px 24px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 16px !important;
+  }
+
+  .hero {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 14px !important;
+  }
+
+  .hero .k {
+    font-size: 13px !important;
+    letter-spacing: 1.5px !important;
+    text-transform: uppercase !important;
+  }
+
+  #rev {
+    font-size: clamp(44px, 12.5vw, 68px) !important;
+    letter-spacing: -2px !important;
+    line-height: 1 !important;
+  }
+
+  #rev .rs {
+    font-size: clamp(28px, 8vw, 42px) !important;
+  }
+
+  .stats {
+    gap: 8px !important;
+    margin-bottom: 0 !important;
+  }
+
+  .stat {
+    padding: 8px 14px !important;
+    min-width: auto !important;
+    border-radius: 12px !important;
+  }
+  .stat b { font-size: 22px !important; }
+  .stat small { font-size: 12px !important; }
+
+  #vsy {
+    font-size: 22px !important;
+    padding: 8px 14px !important;
+    border-radius: 12px !important;
+  }
+  #vsy small { font-size: 12px !important; }
+
+  #headline {
+    margin-left: 0 !important;
+    margin-bottom: 0 !important;
+    text-align: left !important;
+    font-size: 14px !important;
+    max-width: 100% !important;
+  }
+
+  .card {
+    padding: 16px 18px !important;
+    border-radius: 14px !important;
+  }
+
+  .chart {
+    height: 200px !important;
+  }
+
+  #chart {
+    height: 140px !important;
+  }
+
+  .ads #roas {
+    font-size: 38px !important;
+  }
+  .ads #roas small { font-size: 22px !important; }
+
+  #chips {
+    margin-top: 6px !important;
+  }
+  .chip {
+    font-size: 14px !important;
+    padding: 8px 0 !important;
+  }
+
+  #bubble {
+    gap: 10px !important;
+  }
+  #emo { font-size: 28px !important; }
+  #itext { font-size: 16px !important; }
+
+  /* Optimized Mobile Notification Banner */
+  #toast {
+    position: fixed !important;
+    left: 50% !important;
+    right: auto !important;
+    top: 14px !important;
+    transform: translate(-50%, -160%) scale(0.96) !important;
+    width: calc(100vw - 24px) !important;
+    max-width: 440px !important;
+    padding: 12px 16px !important;
+    border-radius: 18px !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 12px !important;
+    box-shadow: 0 16px 40px rgba(0,0,0,0.15) !important;
+    z-index: 9999 !important;
+    box-sizing: border-box !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    transition: transform 0.42s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease !important;
+  }
+  #toast.show {
+    transform: translate(-50%, 0) scale(1) !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+  }
+  #tbig { width: 40px !important; height: 40px !important; font-size: 22px !important; border-radius: 10px !important; flex-shrink: 0 !important; }
+  #th { font-size: 15px !important; margin: 0 !important; white-space: nowrap !important; }
+  #tp { font-size: 13px !important; margin: 0 !important; white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important; max-width: 180px !important; }
+  #tamt { font-size: 20px !important; margin-left: auto !important; flex-shrink: 0 !important; }
+
+  #milestone .sheet {
+    padding: 24px 32px !important;
+    border-radius: 20px !important;
+  }
+  #milestone h2 { font-size: 48px !important; }
+  #milestone p { font-size: 18px !important; }
+
+  #unlock div {
+    font-size: 20px !important;
+    padding: 24px !important;
+  }
+}
 </style>
 </head>
 <body>
@@ -152,6 +413,7 @@ body { font-family: "Inter", -apple-system, system-ui, sans-serif; color: var(--
         <h1 class="storename"></h1>
         <div class="seg"><span class="on">Today</span><span>Week</span><span>Month</span></div>
         <div id="clock"></div>
+        <a id="top-ops-btn" href="/ops.html" class="top-ops-btn" title="Quickly open Operations & All Orders Dashboard">📋 OPS BOARD</a>
         <div class="live" id="live"><span class="dot"></span><span id="livetxt">Live</span></div>
       </div>
       <div class="body">

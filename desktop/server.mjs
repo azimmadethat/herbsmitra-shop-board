@@ -79,7 +79,7 @@ if (!env.BOARD_KEY) {
 
 const WC_CONNECTED = Boolean(env.WC_URL && env.WC_KEY && env.WC_SECRET);
 const PORT = Number(env.PORT || 8080);
-const DESIGNS = ["apple", "meta", "herbsmitra", "classic", "studio", "garden", "swiss", "night"];
+const DESIGNS = ["classic", "meta", "apple", "studio", "swiss"];
 
 // --------------------------------------------------------------- statics ---
 

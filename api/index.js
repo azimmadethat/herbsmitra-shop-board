@@ -2,7 +2,7 @@ import fs from "fs";
 import path from "path";
 import { getEnv } from "./_env.js";
 
-const DESIGNS = ["apple", "meta", "herbsmitra", "classic", "studio", "garden", "swiss", "night"];
+const DESIGNS = ["classic", "meta", "apple", "studio", "swiss"];
 
 export default async function handler(req, res) {
   const env = getEnv();

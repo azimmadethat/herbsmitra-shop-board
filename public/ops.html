@@ -98,34 +98,38 @@
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--good);
-    background: var(--good-bg);
-    border: 1px solid rgba(22,163,74,.2);
+    font-size: 12px;
+    font-weight: 800;
+    color: #ffffff;
+    background: #16a34a;
+    box-shadow: 0 2px 8px rgba(22,163,74,.4);
     padding: 6px 14px;
     border-radius: 999px;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
   }
   .live-badge .dot {
-    width: 8px;
-    height: 8px;
+    width: 7px;
+    height: 7px;
     border-radius: 50%;
-    background: var(--good);
-    box-shadow: 0 0 0 3px rgba(22,163,74,.2);
-    animation: livePulse 2s infinite;
+    background: #ffffff;
+    box-shadow: 0 0 0 0 rgba(255,255,255,.8);
+    animation: livePulse 1.8s infinite;
   }
   .live-badge.off {
-    color: var(--bad);
-    background: var(--bad-bg);
-    border-color: rgba(220,38,38,.2);
+    color: #fff;
+    background: #dc2626;
+    box-shadow: 0 2px 8px rgba(220,38,38,.4);
   }
   .live-badge.off .dot {
-    background: var(--bad);
-    box-shadow: 0 0 0 3px rgba(220,38,38,.2);
+    background: rgba(255,255,255,0.8);
+    box-shadow: none;
     animation: none;
   }
   @keyframes livePulse {
-    70% { box-shadow: 0 0 0 8px transparent; }
+    0% { box-shadow: 0 0 0 0 rgba(255,255,255,0.8); }
+    70% { box-shadow: 0 0 0 7px transparent; }
+    100% { box-shadow: 0 0 0 0 transparent; }
   }
 
   .btn {
@@ -494,14 +498,11 @@
       <button class="btn btn-primary" id="bestDaysBtn" title="View Best Days as per orders in Calendar View" style="background:linear-gradient(135deg, #f59e0b, #d97706);border-color:#b45309;color:#fff;box-shadow:0 2px 8px rgba(245,158,11,0.25);font-weight:700;">🏆 Best Days Calendar</button>
       <span class="live-badge" id="live"><span class="dot"></span> <span id="livetxt">Live Sync</span></span>
       <select id="designSelect" title="Switch Design View">
-        <option value="apple">🍏 Apple Design</option>
-        <option value="meta">🔷 Meta Design</option>
-        <option value="herbsmitra">🌿 HerbsMitra</option>
         <option value="classic">🥭 Classic</option>
+        <option value="meta">🔷 Meta</option>
+        <option value="apple">🍏 Apple</option>
         <option value="studio">💻 Studio</option>
-        <option value="garden">🌸 Garden</option>
         <option value="swiss">🇨🇭 Swiss</option>
-        <option value="night">🌙 Night</option>
       </select>
       <a class="btn btn-primary" id="tvlink" href="#">📺 TV Board</a>
       <button class="btn" id="refreshBtn">🔄 Refresh</button>

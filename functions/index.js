@@ -1,6 +1,6 @@
 // Serves the chosen design at "/". Order of choice: ?design=, the remote's last pick (cookie),
 // BOARD_DESIGN, then classic.
-const DESIGNS = ["apple", "meta", "herbsmitra", "classic", "studio", "garden", "swiss", "night"];
+const DESIGNS = ["classic", "meta", "apple", "studio", "swiss"];
 
 export async function onRequestGet({ request, env }) {
   const url = new URL(request.url);
