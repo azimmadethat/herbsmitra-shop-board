@@ -164,6 +164,322 @@ footer .tag { font-size: 24px; font-weight: 800; color: var(--soft); text-transf
 #unlock.show { display: grid; }
 #unlock small { display: block; font-size: 26px; font-weight: 500; opacity: .8; }
 
+@media (max-width: 900px) {
+  html, body {
+    width: 100%;
+    height: auto;
+    min-height: 100%;
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  #stage {
+    position: relative !important;
+    left: auto !important;
+    top: auto !important;
+    transform: none !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    min-height: 100vh;
+    padding: 16px 14px 44px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 16px !important;
+    overflow-x: hidden;
+  }
+
+  header {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    gap: 8px !important;
+    text-align: center;
+    width: 100%;
+  }
+
+  .clock {
+    font-size: 15px;
+    font-weight: 600;
+  }
+
+  .opener {
+    padding: 0;
+  }
+
+  .opener h1 {
+    font-size: 26px;
+    line-height: 1.1;
+    letter-spacing: -0.3px;
+  }
+
+  .opener p {
+    font-size: 14px;
+    margin-top: 2px;
+  }
+
+  header > div:last-child {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    width: 100%;
+    flex-wrap: wrap;
+    margin-top: 2px;
+  }
+
+  .top-ops-btn {
+    font-size: 14px;
+    padding: 7px 18px;
+    gap: 6px;
+  }
+
+  .live {
+    font-size: 14px;
+    gap: 8px;
+  }
+  .live .dot {
+    width: 10px;
+    height: 10px;
+  }
+
+  .card {
+    border-radius: 22px;
+    box-shadow: 0 10px 30px -10px rgba(0,0,0,.15);
+  }
+
+  .left {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    width: 100%;
+  }
+
+  .hero {
+    padding: 22px 18px 24px;
+  }
+
+  .label {
+    font-size: 13px;
+    letter-spacing: 2px;
+  }
+
+  .revenue {
+    font-size: clamp(44px, 12.5vw, 68px);
+    line-height: 1;
+    letter-spacing: -1.5px;
+    margin-top: 6px;
+  }
+
+  .revenue .rs {
+    font-size: clamp(28px, 8vw, 42px);
+    margin-right: 4px;
+  }
+
+  .stats {
+    gap: 8px;
+    margin-top: 14px;
+  }
+
+  .pill {
+    font-size: 15px;
+    font-weight: 700;
+    padding: 6px 14px;
+    border-radius: 999px;
+  }
+
+  .pill small {
+    font-size: 13px;
+    margin-left: 4px;
+  }
+
+  .race {
+    margin-top: 18px;
+  }
+
+  .track {
+    height: 18px;
+  }
+
+  .track .runner {
+    font-size: 24px;
+  }
+
+  .race .legend {
+    font-size: 13px;
+    margin-top: 6px;
+  }
+
+  .chatrow {
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+  }
+
+  #vee {
+    width: 72px;
+    height: 72px;
+    flex: none;
+  }
+
+  .bubble {
+    padding: 14px 18px;
+    font-size: 16px;
+    line-height: 1.3;
+    min-height: 60px;
+    gap: 10px;
+    border-radius: 18px;
+  }
+
+  .bubble::before {
+    left: -10px;
+    top: 50%;
+    margin-top: -10px;
+    border-width: 10px;
+  }
+
+  .bubble .emo {
+    font-size: 26px;
+  }
+
+  .bubble.answer {
+    font-size: 15px;
+  }
+
+  .bubble .q {
+    font-size: 12px;
+    margin-bottom: 2px;
+  }
+
+  .ads {
+    padding: 22px 18px;
+    width: 100%;
+  }
+
+  .weather {
+    font-size: 40px;
+    line-height: 1;
+  }
+  .weather img {
+    width: 38px !important;
+    height: 38px !important;
+  }
+
+  .roas {
+    font-size: 42px;
+    letter-spacing: -1px;
+    line-height: 1;
+  }
+
+  .roas small {
+    font-size: 20px;
+  }
+
+  .roasnote {
+    font-size: 13px;
+    margin-top: 4px;
+  }
+
+  .spendrow {
+    gap: 8px;
+    margin-top: 12px;
+    flex-wrap: wrap;
+  }
+
+  .spendrow .pill {
+    font-size: 14px;
+    padding: 6px 14px;
+  }
+
+  .camps {
+    margin-top: 16px;
+    gap: 12px;
+  }
+
+  .camp {
+    font-size: 14px;
+    gap: 3px 8px;
+  }
+
+  .camp .meta {
+    font-size: 12px;
+  }
+
+  .camp .bar {
+    height: 8px;
+  }
+
+  .dim {
+    font-size: 14px;
+  }
+
+  footer {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 8px !important;
+    height: auto !important;
+    overflow: visible !important;
+    width: 100%;
+    padding: 4px 0 20px;
+  }
+
+  footer .tag {
+    font-size: 13px;
+    letter-spacing: 1.5px;
+  }
+
+  #chips {
+    display: flex !important;
+    gap: 10px !important;
+    width: 100% !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    -webkit-overflow-scrolling: touch;
+    padding: 4px 2px 8px !important;
+    scrollbar-width: none;
+  }
+  #chips::-webkit-scrollbar {
+    display: none;
+  }
+
+  .chip {
+    font-size: 14px;
+    padding: 6px 14px;
+    flex-shrink: 0;
+  }
+
+  #toast {
+    top: 16px;
+    padding: 14px 18px;
+    border-radius: 18px;
+    gap: 12px;
+    max-width: calc(100vw - 28px);
+  }
+  #toast .big { font-size: 36px; }
+  #toast h2 { font-size: 18px; }
+  #toast p { font-size: 13px; }
+  #toast .amt { font-size: 22px; margin-left: 6px; }
+
+  #milestone div {
+    padding: 24px 32px;
+    border-radius: 24px;
+  }
+  #milestone h2 { font-size: 48px; }
+  #milestone p { font-size: 18px; }
+
+  #unlock {
+    font-size: 22px;
+    padding: 20px;
+  }
+  #unlock small {
+    font-size: 14px;
+    margin-top: 8px;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, ::before, ::after {
     animation-duration: 0.001ms !important;

@@ -12,7 +12,7 @@ export default async function handler(req, res) {
 
   const cookie = (req.headers.cookie || "").match(/(?:^|;\s*)design=([a-z]+)/);
   const designParam = url.searchParams.get("design");
-  const pick = [designParam, cookie && cookie[1], env.BOARD_DESIGN, "apple"]
+  const pick = [designParam, env.BOARD_DESIGN, cookie && cookie[1], "classic"]
     .find(d => DESIGNS.includes(d));
 
   if (!pick) {

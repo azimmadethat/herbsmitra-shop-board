@@ -23,6 +23,14 @@ function fit() {
   if (!stage || stage === DUMMY) return;
   // clientWidth, not innerWidth: Android TV WebViews report innerWidth before zoom.
   const W = document.documentElement.clientWidth || innerWidth, H = document.documentElement.clientHeight || innerHeight;
+  if (W <= 900) {
+    stage.style.transform = "";
+    stage.style.transformOrigin = "";
+    stage.style.left = "";
+    stage.style.top = "";
+    if (typeof fitVisibleChips === "function") fitVisibleChips();
+    return;
+  }
   // Ensure stage content is never vertically clipped on any screen or resolution
   const stageH = Math.max(1080, stage.scrollHeight || 1080);
   const s = Math.min(W / 1920, H / stageH);
@@ -32,7 +40,8 @@ function fit() {
   stage.style.left = "50%"; stage.style.top = "50%";
   if (typeof fitVisibleChips === "function") fitVisibleChips();
 }
-if ($("stage") && $("stage") !== DUMMY) $("stage").style.transform = "translate(-50%,-50%)";
+const isMobileStage = (document.documentElement.clientWidth || innerWidth) <= 900;
+if ($("stage") && $("stage") !== DUMMY && !isMobileStage) $("stage").style.transform = "translate(-50%,-50%)";
 addEventListener("resize", fit); addEventListener("load", fit); fit(); setTimeout(fit, 1500); setInterval(fit, 20000);
 
 /* ---------- formatting ---------- */
@@ -208,6 +217,7 @@ let lastWant = null, lastHave = null;
 function fitVisibleChips() {
   const chips = $("chips");
   if (!chips || !chips.children.length) return;
+  if ((document.documentElement.clientWidth || innerWidth) <= 900) return;
   const maxW = chips.clientWidth;
   if (!maxW || maxW <= 50) return;
 

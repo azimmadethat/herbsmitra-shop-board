@@ -114,7 +114,7 @@ const MIME = {
 function pickDesign(url, cookieHeader) {
   const q = url.searchParams.get("design");
   const m = (cookieHeader || "").match(/(?:^|;\s*)design=([a-z]+)/);
-  return [q, m && m[1], env.BOARD_DESIGN, "apple"].find((d) => DESIGNS.includes(d));
+  return [q, env.BOARD_DESIGN, m && m[1], "classic"].find((d) => DESIGNS.includes(d));
 }
 
 // -------------------------------------------------------------- handlers ---

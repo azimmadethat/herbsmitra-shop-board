@@ -11,7 +11,7 @@ export function getEnv() {
     BREAK_EVEN_ROAS: process.env.BREAK_EVEN_ROAS || "",
     ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY || "",
     OPENAI_API_KEY: process.env.OPENAI_API_KEY || "",
-    BOARD_DESIGN: process.env.BOARD_DESIGN || "",
+    BOARD_DESIGN: process.env.BOARD_DESIGN || "classic",
     BOARD_KV: undefined,
   };
 }
