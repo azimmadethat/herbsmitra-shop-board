@@ -832,16 +832,83 @@ const KEY = (() => {
 
 // Set current design selection in header
 const cookieDesign = (document.cookie.match(/(?:^|;\s*)design=([a-z]+)/) || [])[1] || "apple";
+
+function getLocalDateStr() {
+  const d = new Date(Date.now() + (5.5 * 3600 * 1000));
+  return d.toISOString().slice(0, 10);
+}
+
+function addDaysStr(dateStr, days) {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  dt.setUTCDate(dt.getUTCDate() + days);
+  return dt.toISOString().slice(0, 10);
+}
+
+function getLastMonthRange(dateStr) {
+  const [y, m] = dateStr.split("-").map(Number);
+  const lastMonthEnd = new Date(Date.UTC(y, m - 1, 0));
+  const lastMonthStart = new Date(Date.UTC(lastMonthEnd.getUTCFullYear(), lastMonthEnd.getUTCMonth(), 1));
+  return {
+    from: lastMonthStart.toISOString().slice(0, 10),
+    to: lastMonthEnd.toISOString().slice(0, 10)
+  };
+}
+
+function getThisMonthRange(dateStr) {
+  return {
+    from: dateStr.slice(0, 8) + "01",
+    to: dateStr
+  };
+}
+
+let currentLiveDate = getLocalDateStr();
+let selectedDate = null;
+let selectedStartDate = null;
+let selectedEndDate = null;
+let dateMode = "single";
+let pollTimer = null;
+
+// Initialize date from URL query parameters if navigated from TV Board or another view
+const _urlParams = new URLSearchParams(location.search);
+const _initDate = _urlParams.get("date");
+const _initStart = _urlParams.get("start_date") || _urlParams.get("from");
+const _initEnd = _urlParams.get("end_date") || _urlParams.get("to");
+if (_initStart && _initEnd) {
+  selectedStartDate = _initStart;
+  selectedEndDate = _initEnd;
+  dateMode = "range";
+} else if (_initDate && _initDate !== currentLiveDate) {
+  selectedDate = _initDate;
+  dateMode = "single";
+}
+
+function updateNavLinks() {
+  let dateQuery = "";
+  if (selectedStartDate && selectedEndDate) {
+    dateQuery = `&start_date=${encodeURIComponent(selectedStartDate)}&end_date=${encodeURIComponent(selectedEndDate)}`;
+  } else if (selectedDate) {
+    dateQuery = `&date=${encodeURIComponent(selectedDate)}`;
+  }
+  if ($("tvlink")) $("tvlink").href = "/?k=" + encodeURIComponent(KEY) + dateQuery;
+  if ($("attrlink")) $("attrlink").href = "/attribution.html?k=" + encodeURIComponent(KEY) + dateQuery;
+}
+
 if ($("designSelect")) {
   $("designSelect").value = cookieDesign;
   $("designSelect").addEventListener("change", e => {
     document.cookie = "design=" + e.target.value + "; path=/; max-age=31536000; SameSite=Lax";
-    location.href = "/?design=" + e.target.value + (KEY ? "&k=" + encodeURIComponent(KEY) : "");
+    let target = "/?design=" + encodeURIComponent(e.target.value) + (KEY ? "&k=" + encodeURIComponent(KEY) : "");
+    if (selectedStartDate && selectedEndDate) {
+      target += `&start_date=${encodeURIComponent(selectedStartDate)}&end_date=${encodeURIComponent(selectedEndDate)}`;
+    } else if (selectedDate) {
+      target += `&date=${encodeURIComponent(selectedDate)}`;
+    }
+    location.href = target;
   });
 }
 
-$("tvlink").href = "/?k=" + encodeURIComponent(KEY);
-if ($("attrlink")) $("attrlink").href = "/attribution.html?k=" + encodeURIComponent(KEY);
+updateNavLinks();
 $("refreshBtn").onclick = () => poll(true);
 
 const inr = v => Math.round(v || 0).toLocaleString("en-IN");
@@ -884,6 +951,17 @@ function kpi(k, v, d, bad, good, icon, extraAttrs = "") {
 function render(s) {
   state = s;
   hideLoading();
+  // Save active snapshot for fast 0ms handoff across TV Board and Ops Board
+  try {
+    sessionStorage.setItem("shopboard_active_snapshot", JSON.stringify({
+      state: s,
+      date: s.date || s.selected_date,
+      selected_date: s.selected_date,
+      is_past_date: Boolean(s.is_past_date),
+      ts: Date.now()
+    }));
+  } catch {}
+  updateNavLinks();
   if (s.store_name) $("store").textContent = s.store_name + " · Operations Command Center";
   const isRange = Boolean(s.is_date_range);
   const isPast = Boolean(s.is_past_date);
@@ -1458,42 +1536,6 @@ if ($("bestDaysBtn")) {
   $("bestDaysBtn").addEventListener("click", () => openBestDaysCalendar());
 }
 
-function getLocalDateStr() {
-  const d = new Date(Date.now() + (5.5 * 3600 * 1000));
-  return d.toISOString().slice(0, 10);
-}
-
-function addDaysStr(dateStr, days) {
-  const [y, m, d] = dateStr.split("-").map(Number);
-  const dt = new Date(Date.UTC(y, m - 1, d));
-  dt.setUTCDate(dt.getUTCDate() + days);
-  return dt.toISOString().slice(0, 10);
-}
-
-function getLastMonthRange(dateStr) {
-  const [y, m] = dateStr.split("-").map(Number);
-  const lastMonthEnd = new Date(Date.UTC(y, m - 1, 0));
-  const lastMonthStart = new Date(Date.UTC(lastMonthEnd.getUTCFullYear(), lastMonthEnd.getUTCMonth(), 1));
-  return {
-    from: lastMonthStart.toISOString().slice(0, 10),
-    to: lastMonthEnd.toISOString().slice(0, 10)
-  };
-}
-
-function getThisMonthRange(dateStr) {
-  return {
-    from: dateStr.slice(0, 8) + "01",
-    to: dateStr
-  };
-}
-
-let currentLiveDate = getLocalDateStr();
-let selectedDate = null;
-let selectedStartDate = null;
-let selectedEndDate = null;
-let dateMode = "single";
-let pollTimer = null;
-
 function setDateMode(mode) {
   dateMode = mode;
   if (mode === "range") {
@@ -1550,6 +1592,7 @@ if ($("datePicker")) {
       selectedStartDate = null;
       selectedEndDate = null;
       if ($("liveTodayBtn")) $("liveTodayBtn").style.display = "inline-flex";
+      updateNavLinks();
       showLoading(`Loading Archive for ${val}…`, `Fetching orders and performance for ${val}`);
       poll(true);
     }
@@ -1577,6 +1620,7 @@ if ($("applyRangeBtn")) {
     selectedEndDate = to;
     selectedDate = null;
     if ($("liveTodayBtn")) $("liveTodayBtn").style.display = "inline-flex";
+    updateNavLinks();
     showLoading(`Loading Range (${from} to ${to})…`, "Fetching orders and revenue for period");
     poll(true);
   });
@@ -1596,6 +1640,7 @@ if ($("quickRangeSelect")) {
       selectedEndDate = null;
       if ($("datePicker")) $("datePicker").value = y;
       if ($("liveTodayBtn")) $("liveTodayBtn").style.display = "inline-flex";
+      updateNavLinks();
       showLoading(`Loading Yesterday (${y})…`, "Fetching orders and revenue");
       poll(true);
     } else if (val === "last7") {
@@ -1608,6 +1653,7 @@ if ($("quickRangeSelect")) {
       selectedEndDate = to;
       selectedDate = null;
       if ($("liveTodayBtn")) $("liveTodayBtn").style.display = "inline-flex";
+      updateNavLinks();
       showLoading(`Loading Last 7 Days (${from} to ${to})…`, "Fetching orders and revenue");
       poll(true);
     } else if (val === "last30") {
@@ -1620,6 +1666,7 @@ if ($("quickRangeSelect")) {
       selectedEndDate = to;
       selectedDate = null;
       if ($("liveTodayBtn")) $("liveTodayBtn").style.display = "inline-flex";
+      updateNavLinks();
       showLoading(`Loading Last 30 Days (${from} to ${to})…`, "Fetching orders and revenue");
       poll(true);
     } else if (val === "this_month") {
@@ -1631,6 +1678,7 @@ if ($("quickRangeSelect")) {
       selectedEndDate = tm.to;
       selectedDate = null;
       if ($("liveTodayBtn")) $("liveTodayBtn").style.display = "inline-flex";
+      updateNavLinks();
       showLoading(`Loading This Month (${tm.from} to ${tm.to})…`, "Fetching month's total data");
       poll(true);
     } else if (val === "last_month") {
@@ -1642,6 +1690,7 @@ if ($("quickRangeSelect")) {
       selectedEndDate = lm.to;
       selectedDate = null;
       if ($("liveTodayBtn")) $("liveTodayBtn").style.display = "inline-flex";
+      updateNavLinks();
       showLoading(`Loading Last Month (${lm.from} to ${lm.to})…`, "Fetching full month's data");
       poll(true);
     }
@@ -1656,6 +1705,18 @@ function resetToLive() {
   setDateMode("single");
   if ($("datePicker")) $("datePicker").value = currentLiveDate;
   if ($("liveTodayBtn")) $("liveTodayBtn").style.display = "none";
+  if (window.history && window.history.replaceState) {
+    try {
+      const u = new URL(location.href);
+      u.searchParams.delete("date");
+      u.searchParams.delete("start_date");
+      u.searchParams.delete("end_date");
+      u.searchParams.delete("from");
+      u.searchParams.delete("to");
+      window.history.replaceState(null, "", u.toString());
+    } catch {}
+  }
+  updateNavLinks();
   showLoading("Loading Live Operations Board…", "Connecting live to WooCommerce store and Meta Ads");
   poll(true);
 }
@@ -1707,7 +1768,39 @@ $("statusFilter").addEventListener("change", e => {
 });
 $("payFilter").addEventListener("change", renderOrders);
 
-showLoading("Loading Live Operations Board…", "Connecting live to WooCommerce store and Meta Ads");
+function restoreActiveSnapshot() {
+  try {
+    const raw = sessionStorage.getItem("shopboard_active_snapshot");
+    if (!raw) return false;
+    const snap = JSON.parse(raw);
+    if (!snap || !snap.state || !snap.ts) return false;
+    if (Date.now() - snap.ts > 5 * 60 * 1000) return false;
+    if (selectedStartDate && selectedEndDate) {
+      if (snap.state.start_date !== selectedStartDate || snap.state.end_date !== selectedEndDate) return false;
+    } else if (selectedDate) {
+      if (snap.selected_date !== selectedDate && snap.date !== selectedDate) return false;
+    } else {
+      if (snap.is_past_date) return false;
+    }
+    render(snap.state);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+setDateMode(dateMode);
+if (dateMode === "range") {
+  if ($("startDatePicker") && selectedStartDate) $("startDatePicker").value = selectedStartDate;
+  if ($("endDatePicker") && selectedEndDate) $("endDatePicker").value = selectedEndDate;
+} else if (selectedDate) {
+  if ($("datePicker")) $("datePicker").value = selectedDate;
+}
+
+const restored = restoreActiveSnapshot();
+if (!restored) {
+  showLoading(selectedDate ? `Loading Archive for ${selectedDate}…` : (selectedStartDate ? `Loading Range…` : "Loading Live Operations Board…"), "Connecting live to WooCommerce store and Meta Ads");
+}
 poll();
 </script>
 </body>

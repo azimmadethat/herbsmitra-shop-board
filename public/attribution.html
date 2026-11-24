@@ -513,6 +513,17 @@ function renderDashboard(data) {
   if (data.store_name) $("storeName").textContent = data.store_name + " · True Return Attribution";
   if (data.date_label) $("subHeader").textContent = `Period: ${data.date_label} · Model: ${data.model} · 7-Day Click-Only Window`;
 
+  if (data.range && data.range.since && data.range.until) {
+    let dateQuery = "";
+    if (data.range.since === data.range.until) {
+      dateQuery = `&date=${encodeURIComponent(data.range.since)}`;
+    } else {
+      dateQuery = `&start_date=${encodeURIComponent(data.range.since)}&end_date=${encodeURIComponent(data.range.until)}`;
+    }
+    if ($("opsLink")) $("opsLink").href = "/ops.html?k=" + encodeURIComponent(KEY) + dateQuery;
+    if ($("tvLink")) $("tvLink").href = "/?k=" + encodeURIComponent(KEY) + dateQuery;
+  }
+
   const k = data.kpis || {};
   $("kpiStoreSales").textContent = "₹" + inr(k.total_store_sales);
   $("kpiStoreOrders").textContent = `${k.total_store_orders || 0} verified orders`;

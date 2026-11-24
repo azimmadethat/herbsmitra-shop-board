@@ -173,17 +173,19 @@ function render(s) {
       : "Ads today";
   }
   if (s.spend) {
-    const r = s.roas_real, early = s.spend < 1500;
+    const r = (typeof s.roas_real === "number" && !isNaN(s.roas_real)) ? s.roas_real : (s.spend ? (s.revenue / s.spend) : 0);
+    const early = s.spend < 1500;
     $("roas").innerHTML = `${r.toFixed(2)}<small>x</small>`;
     $("weather").innerHTML = META_SUNRISE_ICON;
     $("roasnote").textContent = early ? "too early to tell, the day just started" : `real sales ÷ ad spend · break-even ${be}`;
     // Meta pulls run every 15 min; anything much older means the connection is down.
-    if (s.meta_age_min !== null && s.meta_age_min > 40) {   // pulls run every 15 min
+    if (s.meta_age_min !== null && s.meta_age_min !== undefined && s.meta_age_min > 40) {   // pulls run every 15 min
       const h = Math.floor(s.meta_age_min / 60), m = s.meta_age_min % 60;
       $("roasnote").textContent = `⚠️ ad numbers are ${h ? h + "h " : ""}${m}m old, Meta is reconnecting`;
     }
     $("spend").textContent = "₹" + inr(s.spend);
-    $("mroas").textContent = s.roas_meta ? s.roas_meta.toFixed(2) + "x" : "-";
+    const mroasVal = (typeof s.roas_meta === "number" && !isNaN(s.roas_meta)) ? s.roas_meta : 0;
+    $("mroas").textContent = mroasVal ? mroasVal.toFixed(2) + "x" : "-";
     mood(early ? "happy" : r >= be * 1.3 ? "grin" : r >= be ? "happy" : r >= be * .75 ? "meh" : "worried");
   } else {
     $("roas").innerHTML = "-"; $("weather").innerHTML = META_SUNRISE_ICON;
@@ -196,14 +198,17 @@ function render(s) {
   if (s.spend && s.campaigns && s.campaigns.length) {
     const scale = 4;
     const metaNote = s.is_past_date
-      ? `Meta ad spend for ${s.selected_date}`
+      ? (s.is_date_range ? `Meta ad spend for ${s.selected_date}` : `Meta ad spend for ${s.selected_date}`)
       : `Meta numbers as of ${s.meta_at || "-"}, they refresh every 15 min`;
     $("camps").innerHTML = s.campaigns.slice(0, window.CAMP_LIMIT || 5).map(c => {
       if (window.renderCampaign) return window.renderCampaign(c, be);
-      const r = c.roas || 0, col = r >= be ? "var(--good)" : r >= be * .75 ? "var(--warn)" : "var(--bad)";
-      return `<div class="camp"><span class="nm">${esc(c.short)}</span><span class="rv">${c.roas ? c.roas.toFixed(1) + "x" : "no sales yet"}</span>
+      const r = (typeof c.roas === "number" && !isNaN(c.roas)) ? c.roas : 0;
+      const col = r >= be ? "var(--good)" : r >= be * .75 ? "var(--warn)" : "var(--bad)";
+      const cSpend = c.spend || 0;
+      const cPurchases = c.purchases || 0;
+      return `<div class="camp"><span class="nm">${esc(c.short || c.name || "Campaign")}</span><span class="rv">${r ? r.toFixed(1) + "x" : "no sales yet"}</span>
         <div class="bar"><b style="width:${Math.min(100, r / scale * 100)}%;background:${col}"></b><span class="be" style="left:${be / scale * 100}%"></span></div>
-        <div class="meta"><span>₹${inr(c.spend)} spent</span><span>${c.purchases} purchase${c.purchases === 1 ? "" : "s"} on Meta</span></div></div>`;
+        <div class="meta"><span>₹${inr(cSpend)} spent</span><span>${cPurchases} purchase${cPurchases === 1 ? "" : "s"} on Meta</span></div></div>`;
     }).join("") + (window.renderCampaign ? "" : `<div class="dim" style="font-size:20px">${metaNote}</div>`);
   }
 
@@ -522,13 +527,30 @@ addEventListener("keydown", e => {
 const DESIGNS = ["classic", "meta", "apple", "studio", "swiss"];
 
 /* ---------- live connection + date selection ---------- */
-// Asks the server for fresh numbers every 20 seconds (or for the chosen historical date).
+// Asks the server for fresh numbers every 20 seconds (or for the chosen historical date/range).
+const _searchParams = new URLSearchParams(location.search);
+window.SELECTED_DATE = _searchParams.get("date") || null;
+window.SELECTED_START_DATE = _searchParams.get("start_date") || _searchParams.get("from") || null;
+window.SELECTED_END_DATE = _searchParams.get("end_date") || _searchParams.get("to") || null;
 let seenIds = null;
-window.SELECTED_DATE = null;
 let pollTimer = null;
 
 function resetToLive() {
   window.SELECTED_DATE = null;
+  window.SELECTED_START_DATE = null;
+  window.SELECTED_END_DATE = null;
+  if (window.history && window.history.replaceState) {
+    try {
+      const u = new URL(location.href);
+      u.searchParams.delete("date");
+      u.searchParams.delete("start_date");
+      u.searchParams.delete("end_date");
+      u.searchParams.delete("from");
+      u.searchParams.delete("to");
+      window.history.replaceState(null, "", u.toString());
+    } catch {}
+  }
+  initTopOps();
   const dateInput = document.getElementById("hud-date");
   if (dateInput) dateInput.value = "";
   const liveBtn = document.getElementById("hud-live-btn");
@@ -540,23 +562,60 @@ function resetToLive() {
 }
 window.resetToLive = resetToLive;
 
+function restoreActiveSnapshot() {
+  try {
+    const raw = sessionStorage.getItem("shopboard_active_snapshot");
+    if (!raw) return false;
+    const snap = JSON.parse(raw);
+    if (!snap || !snap.state || !snap.ts) return false;
+    // Don't restore snapshots older than 5 minutes
+    if (Date.now() - snap.ts > 5 * 60 * 1000) return false;
+    if (window.SELECTED_START_DATE && window.SELECTED_END_DATE) {
+      if (snap.state.start_date !== window.SELECTED_START_DATE || snap.state.end_date !== window.SELECTED_END_DATE) return false;
+    } else if (window.SELECTED_DATE) {
+      if (snap.selected_date !== window.SELECTED_DATE && snap.date !== window.SELECTED_DATE) return false;
+    } else {
+      // Live board: do not restore historical or range snapshots
+      if (snap.is_past_date) return false;
+    }
+    render(snap.state);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 async function poll() {
   if (pollTimer) { clearTimeout(pollTimer); pollTimer = null; }
   try {
-    const endpoint = window.SELECTED_DATE ? `/api/state?date=${encodeURIComponent(window.SELECTED_DATE)}` : "/api/state";
+    let endpoint = "/api/state";
+    if (window.SELECTED_START_DATE && window.SELECTED_END_DATE) {
+      endpoint = `/api/state?start_date=${encodeURIComponent(window.SELECTED_START_DATE)}&end_date=${encodeURIComponent(window.SELECTED_END_DATE)}`;
+    } else if (window.SELECTED_DATE) {
+      endpoint = `/api/state?date=${encodeURIComponent(window.SELECTED_DATE)}`;
+    }
     const r = await fetch(withKey(endpoint), { cache: "no-store" });
     const s = await r.json();
     if (!r.ok) throw new Error(s.error || "HTTP " + r.status);
     $("live").classList.remove("off");
-    $("livetxt").textContent = window.SELECTED_DATE ? "archive" : "live";
-    const fresh = seenIds && !window.SELECTED_DATE ? s.order_ids.filter(id => !seenIds.has(id)) : [];
+    $("livetxt").textContent = (window.SELECTED_DATE || window.SELECTED_START_DATE) ? "archive" : "live";
+    const isLive = !window.SELECTED_DATE && !window.SELECTED_START_DATE;
+    const fresh = seenIds && isLive ? s.order_ids.filter(id => !seenIds.has(id)) : [];
     const prevRev = state ? state.revenue : null;
     seenIds = new Set(s.order_ids);
     render(s); emit("state", s);
-    // Fresh live state received
-    try { localStorage.removeItem("shopboard_last_state"); } catch {}
+    // Cache active snapshot to sessionStorage for 0ms transitions between TV and Ops Board
+    try {
+      sessionStorage.setItem("shopboard_active_snapshot", JSON.stringify({
+        state: s,
+        date: s.date || s.selected_date,
+        selected_date: s.selected_date,
+        is_past_date: Boolean(s.is_past_date),
+        ts: Date.now()
+      }));
+    } catch {}
     if (!window._said) { window._said = 1; nextInsight(); }
-    if (!window.SELECTED_DATE) {
+    if (isLive) {
       (s.recent || []).filter(o => fresh.includes(o.name)).reverse().forEach(onOrder);
       if (prevRev !== null) {
         const crossed = (s.milestones || []).filter(m => prevRev < m && s.revenue >= m).pop();
@@ -567,8 +626,9 @@ async function poll() {
     $("live").classList.add("off"); $("livetxt").textContent = "reconnecting";
     if (!state) say("🔌", "Can't load the numbers: " + e.message);
   }
-  pollTimer = setTimeout(poll, window.SELECTED_DATE ? 60000 : 20000);
+  pollTimer = setTimeout(poll, (window.SELECTED_DATE || window.SELECTED_START_DATE) ? 60000 : 20000);
 }
+restoreActiveSnapshot();
 poll();
 setTimeout(needUnlock, 800);
 
@@ -1084,8 +1144,14 @@ window.closeBestDaysCalendar = closeBestDaysCalendar;
 
 // Ensure Top Ops button exists and has correct key link across all themes
 function initTopOps() {
-  const opsUrl = "/ops.html" + (KEY ? "?k=" + encodeURIComponent(KEY) : "");
-  const attrUrl = "/attribution.html" + (KEY ? "?k=" + encodeURIComponent(KEY) : "");
+  let dateQuery = "";
+  if (window.SELECTED_START_DATE && window.SELECTED_END_DATE) {
+    dateQuery = `&start_date=${encodeURIComponent(window.SELECTED_START_DATE)}&end_date=${encodeURIComponent(window.SELECTED_END_DATE)}`;
+  } else if (window.SELECTED_DATE) {
+    dateQuery = `&date=${encodeURIComponent(window.SELECTED_DATE)}`;
+  }
+  const opsUrl = "/ops.html" + (KEY ? "?k=" + encodeURIComponent(KEY) : "") + dateQuery;
+  const attrUrl = "/attribution.html" + (KEY ? "?k=" + encodeURIComponent(KEY) : "") + dateQuery;
   let btn = document.getElementById("top-ops-btn");
   if (btn) btn.href = opsUrl;
   let attrBtn = document.getElementById("top-attr-btn");
@@ -1387,7 +1453,13 @@ function initHUD() {
     sel.addEventListener("change", e => {
       const next = e.target.value;
       document.cookie = "design=" + next + "; path=/; max-age=31536000; SameSite=Lax";
-      location.href = API + "/?design=" + next + (KEY ? "&k=" + encodeURIComponent(KEY) : "");
+      let target = API + "/?design=" + next + (KEY ? "&k=" + encodeURIComponent(KEY) : "");
+      if (window.SELECTED_START_DATE && window.SELECTED_END_DATE) {
+        target += `&start_date=${encodeURIComponent(window.SELECTED_START_DATE)}&end_date=${encodeURIComponent(window.SELECTED_END_DATE)}`;
+      } else if (window.SELECTED_DATE) {
+        target += `&date=${encodeURIComponent(window.SELECTED_DATE)}`;
+      }
+      location.href = target;
     });
   }
 
@@ -1396,18 +1468,32 @@ function initHUD() {
   if (hudDate) {
     const todayISO = new Date().toISOString().slice(0, 10);
     hudDate.max = todayISO;
+    if (window.SELECTED_DATE) hudDate.value = window.SELECTED_DATE;
     hudDate.addEventListener("change", e => {
       const val = e.target.value;
       if (!val || val === todayISO) {
         resetToLive();
       } else {
         window.SELECTED_DATE = val;
+        window.SELECTED_START_DATE = null;
+        window.SELECTED_END_DATE = null;
+        if (window.history && window.history.replaceState) {
+          try {
+            const u = new URL(location.href);
+            u.searchParams.set("date", val);
+            u.searchParams.delete("start_date");
+            u.searchParams.delete("end_date");
+            window.history.replaceState(null, "", u.toString());
+          } catch {}
+        }
+        initTopOps();
         if (hudLive) hudLive.style.display = "inline-flex";
         poll();
       }
     });
   }
   if (hudLive) {
+    if (window.SELECTED_DATE || window.SELECTED_START_DATE) hudLive.style.display = "inline-flex";
     hudLive.addEventListener("click", () => {
       resetToLive();
       closeMenu();
