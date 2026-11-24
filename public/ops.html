@@ -701,6 +701,7 @@
         <option value="studio">💻 Studio</option>
         <option value="swiss">🇨🇭 Swiss</option>
       </select>
+      <a class="btn" id="attrlink" href="#" style="background:#7c3aed;color:#fff;border-color:#6d28d9;font-weight:700;">🎯 Attribution</a>
       <a class="btn btn-primary" id="tvlink" href="#">📺 TV Board</a>
       <button class="btn" id="refreshBtn">🔄 Refresh</button>
     </div>
@@ -840,6 +841,7 @@ if ($("designSelect")) {
 }
 
 $("tvlink").href = "/?k=" + encodeURIComponent(KEY);
+if ($("attrlink")) $("attrlink").href = "/attribution.html?k=" + encodeURIComponent(KEY);
 $("refreshBtn").onclick = () => poll(true);
 
 const inr = v => Math.round(v || 0).toLocaleString("en-IN");
@@ -1705,6 +1707,7 @@ $("statusFilter").addEventListener("change", e => {
 });
 $("payFilter").addEventListener("change", renderOrders);
 
+showLoading("Loading Live Operations Board…", "Connecting live to WooCommerce store and Meta Ads");
 poll();
 </script>
 </body>

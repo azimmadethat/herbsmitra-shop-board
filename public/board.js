@@ -286,27 +286,8 @@ try {
   if (cEl && cEl !== DUMMY) ro.observe(cEl);
 } catch {}
 
-// Instant paint from local storage so the board renders with full data in 0ms without waiting to connect
-(function restoreCachedState() {
-  try {
-    const raw = localStorage.getItem("shopboard_last_state");
-    if (raw) {
-      const cached = JSON.parse(raw);
-      // Only restore cached state if it belongs to today's local store date (IST UTC+5:30)
-      const nowIST = new Date(Date.now() + 5.5 * 3600 * 1000).toISOString().slice(0, 10);
-      if (cached && cached.revenue !== undefined && cached.date === nowIST) {
-        highestLiveDate = cached.date;
-        render(cached);
-        const live = $("live");
-        if (live) live.classList.remove("off");
-        const lt = $("livetxt");
-        if (lt) lt.textContent = "live";
-      } else {
-        localStorage.removeItem("shopboard_last_state");
-      }
-    }
-  } catch {}
-})();
+// Purge any stale cached state from previous sessions/days so the board always starts with fresh live data
+try { localStorage.removeItem("shopboard_last_state"); } catch {}
 function itemsText(o) {
   return o.items.map(i => i.name + (i.qty > 1 ? " ×" + i.qty : "")).join(" + ");
 }
@@ -572,7 +553,8 @@ async function poll() {
     const prevRev = state ? state.revenue : null;
     seenIds = new Set(s.order_ids);
     render(s); emit("state", s);
-    try { if (!window.SELECTED_DATE) localStorage.setItem("shopboard_last_state", JSON.stringify(s)); } catch {}
+    // Fresh live state received
+    try { localStorage.removeItem("shopboard_last_state"); } catch {}
     if (!window._said) { window._said = 1; nextInsight(); }
     if (!window.SELECTED_DATE) {
       (s.recent || []).filter(o => fresh.includes(o.name)).reverse().forEach(onOrder);
@@ -1103,10 +1085,12 @@ window.closeBestDaysCalendar = closeBestDaysCalendar;
 // Ensure Top Ops button exists and has correct key link across all themes
 function initTopOps() {
   const opsUrl = "/ops.html" + (KEY ? "?k=" + encodeURIComponent(KEY) : "");
+  const attrUrl = "/attribution.html" + (KEY ? "?k=" + encodeURIComponent(KEY) : "");
   let btn = document.getElementById("top-ops-btn");
-  if (btn) {
-    btn.href = opsUrl;
-  } else {
+  if (btn) btn.href = opsUrl;
+  let attrBtn = document.getElementById("top-attr-btn");
+  if (attrBtn) attrBtn.href = attrUrl;
+  if (!btn) {
     const live = $("live");
     if (live && live.parentElement) {
       btn = document.createElement("a");

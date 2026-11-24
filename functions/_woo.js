@@ -129,13 +129,23 @@ async function wooOrders(env, { after, before, fields, maxPages = 30, order = "a
   }
 }
 
-const TODAY_FIELDS = "id,number,date_created,date_created_gmt,status,total,billing,shipping,line_items,customer_id,payment_method,payment_method_title";
+const TODAY_FIELDS = "id,number,date_created,date_created_gmt,status,total,billing,shipping,line_items,customer_id,payment_method,payment_method_title,meta_data";
 
 function mapOrder(o, storeName, tz) {
   const gmt = o.date_created_gmt ? new Date(o.date_created_gmt + "Z") : new Date(o.date_created);
   const at = local(gmt, tz);
   const billing = o.billing || {}, shipping = o.shipping || {};
   const first = titleCase(String(billing.first_name || "").trim().split(/\s+/)[0] || "");
+  let visitorId = "";
+  let journey = null;
+  if (Array.isArray(o.meta_data)) {
+    for (const m of o.meta_data) {
+      if (m.key === "sa_visitor_id" || m.key === "_sa_vid") visitorId = String(m.value || "");
+      if (m.key === "sa_journey" || m.key === "_sa_journey") {
+        try { journey = typeof m.value === "string" ? JSON.parse(m.value) : m.value; } catch (e) {}
+      }
+    }
+  }
   return {
     id: o.id,
     name: "#" + String(o.number),
@@ -149,6 +159,9 @@ function mapOrder(o, storeName, tz) {
     method: String(o.payment_method || "").toLowerCase(),
     customerId: o.customer_id || 0,
     new: false,
+    visitorId,
+    journey,
+    rawDate: o.date_created_gmt ? o.date_created_gmt + "Z" : o.date_created,
     items: (o.line_items || []).map(li => ({ name: shortName(li.name, storeName), qty: li.quantity || 1, amount: parseFloat(li.total) || 0 })),
   };
 }

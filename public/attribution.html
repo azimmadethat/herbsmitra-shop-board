@@ -1,0 +1,684 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>SuperAttribution · Herbs Mitra</title>
+<link rel="icon" type="image/png" href="/logo.png">
+<link rel="apple-touch-icon" href="/logo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #f8fafc;
+  --card: #ffffff;
+  --card-border: #e2e8f0;
+  --ink: #0f172a;
+  --muted: #64748b;
+  --accent: #2563eb;
+  --accent-light: #eff6ff;
+  --good: #16a34a;
+  --good-bg: #f0fdf4;
+  --warn: #d97706;
+  --warn-bg: #fffbeb;
+  --bad: #dc2626;
+  --bad-bg: #fef2f2;
+  --purple: #7c3aed;
+  --purple-bg: #f5f3ff;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--ink);
+  line-height: 1.5;
+  padding: 20px;
+  min-height: 100vh;
+}
+
+.wrap { max-width: 1440px; margin: 0 auto; }
+
+/* Header */
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--card-border);
+  margin-bottom: 24px;
+}
+.brand-area { display: flex; align-items: center; gap: 14px; }
+.logo-img { width: 44px; height: 44px; border-radius: 12px; object-fit: contain; }
+.header-titles h1 { font-size: 22px; font-weight: 800; color: var(--ink); letter-spacing: -0.5px; }
+.header-titles p { font-size: 13px; color: var(--muted); font-weight: 500; }
+
+.header-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  border: 1px solid var(--card-border);
+  background: #ffffff;
+  color: var(--ink);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.btn:hover { background: var(--bg); border-color: #cbd5e1; }
+.btn-primary { background: var(--accent); color: #ffffff; border-color: var(--accent); }
+.btn-primary:hover { background: #1d4ed8; }
+
+.live-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: var(--good-bg);
+  border: 1px solid rgba(22, 163, 74, 0.25);
+  color: var(--good);
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+}
+.live-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--good); }
+
+/* Controls Toolbar */
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 14px;
+  background: #ffffff;
+  padding: 14px 18px;
+  border: 1px solid var(--card-border);
+  border-radius: 14px;
+  margin-bottom: 24px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+}
+.tool-group { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.tool-label { font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; }
+
+select, input[type="search"] {
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--card-border);
+  font-size: 13px;
+  font-family: inherit;
+  color: var(--ink);
+  background: #ffffff;
+  outline: none;
+}
+select:focus, input[type="search"]:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(37,99,235,0.12); }
+
+/* KPI Cards Grid */
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+.kpi-card {
+  background: #ffffff;
+  border: 1px solid var(--card-border);
+  border-radius: 14px;
+  padding: 20px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+}
+.kpi-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.kpi-title { font-size: 13px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.3px; }
+.kpi-icon { font-size: 18px; }
+.kpi-val { font-size: 30px; font-weight: 800; color: var(--ink); letter-spacing: -0.5px; }
+.kpi-sub { font-size: 13px; color: var(--muted); margin-top: 4px; font-weight: 500; }
+.kpi-badge { display: inline-flex; padding: 2px 8px; border-radius: 6px; font-size: 12px; font-weight: 700; margin-top: 8px; }
+.badge-good { background: var(--good-bg); color: var(--good); }
+.badge-bad { background: var(--bad-bg); color: var(--bad); }
+.badge-warn { background: var(--warn-bg); color: var(--warn); }
+.badge-purple { background: var(--purple-bg); color: var(--purple); }
+
+/* Alert Cards Grid */
+.alerts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+.alert-card {
+  border-radius: 14px;
+  padding: 18px 20px;
+  border: 1px solid transparent;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.alert-winner { background: var(--good-bg); border-color: rgba(22, 163, 74, 0.25); color: #14532d; }
+.alert-star { background: var(--accent-light); border-color: rgba(37, 99, 235, 0.25); color: #1e3a8a; }
+.alert-burner { background: var(--bad-bg); border-color: rgba(220, 38, 38, 0.25); color: #7f1d1d; }
+.alert-head { display: flex; justify-content: space-between; align-items: center; font-size: 12px; font-weight: 800; text-transform: uppercase; }
+.alert-name { font-size: 16px; font-weight: 800; }
+.alert-details { font-size: 13px; font-weight: 600; opacity: 0.9; }
+
+/* Tabs & Table */
+.tab-bar {
+  display: flex;
+  gap: 8px;
+  border-bottom: 1px solid var(--card-border);
+  margin-bottom: 16px;
+  overflow-x: auto;
+}
+.tab-btn {
+  padding: 10px 18px;
+  font-size: 14px;
+  font-weight: 700;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+.tab-btn:hover { color: var(--ink); }
+.tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+.table-card {
+  background: #ffffff;
+  border: 1px solid var(--card-border);
+  border-radius: 14px;
+  overflow-x: auto;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+  margin-bottom: 24px;
+}
+table { width: 100%; border-collapse: collapse; font-size: 13px; text-align: left; }
+th {
+  background: #f8fafc;
+  padding: 12px 14px;
+  font-weight: 700;
+  color: var(--muted);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid var(--card-border);
+  white-space: nowrap;
+  user-select: none;
+  cursor: pointer;
+}
+th:hover { color: var(--ink); }
+td {
+  padding: 14px;
+  border-bottom: 1px solid #f1f5f9;
+  white-space: nowrap;
+  color: var(--ink);
+}
+tr:hover td { background: #f8fafc; }
+.num { text-align: right; font-variant-numeric: tabular-nums; }
+.font-bold { font-weight: 700; }
+
+.verdict-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: help;
+}
+.pill-crushing { background: var(--good-bg); color: var(--good); border: 1px solid rgba(22, 163, 74, 0.2); }
+.pill-profit { background: var(--accent-light); color: var(--accent); border: 1px solid rgba(37, 99, 235, 0.2); }
+.pill-loss { background: var(--bad-bg); color: var(--bad); border: 1px solid rgba(220, 38, 38, 0.2); }
+.pill-broken { background: var(--warn-bg); color: var(--warn); border: 1px solid rgba(217, 119, 6, 0.2); }
+
+/* Formula Accordion */
+.formula-box {
+  background: #ffffff;
+  border: 1px solid var(--card-border);
+  border-radius: 14px;
+  padding: 20px;
+  margin-bottom: 24px;
+}
+.formula-head { font-size: 15px; font-weight: 800; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+.formula-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 12px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.formula-item { background: var(--bg); padding: 12px 14px; border-radius: 8px; border: 1px solid #e2e8f0; }
+.formula-item b { color: var(--ink); display: block; margin-bottom: 4px; font-size: 13px; }
+
+/* Sync Health Footer */
+footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14px;
+  padding-top: 16px;
+  border-top: 1px solid var(--card-border);
+  font-size: 12px;
+  color: var(--muted);
+}
+.sync-tags { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.sync-tag { background: #e2e8f0; padding: 3px 8px; border-radius: 6px; font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- Header -->
+  <header>
+    <div class="brand-area">
+      <img src="/logo.png" alt="Herbs Mitra Logo" class="logo-img" onerror="this.src='/herbsmitra-logo.png'">
+      <div class="header-titles">
+        <h1 id="storeName">Herbs Mitra · True Return Attribution</h1>
+        <p id="subHeader">WooCommerce Orders & Meta Ads · 7-Day Click-Only Window</p>
+      </div>
+    </div>
+    <div class="header-actions">
+      <span class="live-pill"><span class="live-dot"></span><span id="syncStatus">Synced Live</span></span>
+      <a href="/ops.html" id="opsLink" class="btn">📋 Ops Board</a>
+      <a href="/" id="tvLink" class="btn">📺 TV Board</a>
+    </div>
+  </header>
+
+  <!-- Controls Toolbar -->
+  <div class="toolbar">
+    <div class="tool-group">
+      <span class="tool-label">Preset:</span>
+      <select id="presetSelect">
+        <option value="today">Today</option>
+        <option value="yesterday">Yesterday</option>
+        <option value="7d">Last 7 Days</option>
+        <option value="14d">Last 14 Days</option>
+        <option value="30d">Last 30 Days</option>
+        <option value="demo">Demo Fixture (20 Nov)</option>
+      </select>
+    </div>
+
+    <div class="tool-group">
+      <span class="tool-label">Attribution Model:</span>
+      <select id="modelSelect">
+        <option value="BLEND">Position Blend (40/60 & 30/50/20) - Default</option>
+        <option value="FIRST">First Non-Direct Click (100%)</option>
+        <option value="LAST">Last Non-Direct Click (100%)</option>
+        <option value="LINEAR">Linear Split (Equal Share)</option>
+        <option value="SURVEY">Survey Blend (Post-Purchase Survey)</option>
+        <option value="PAID LC">Paid Last Click (Double-Counting Model)</option>
+        <option value="META">Meta Claimed (Meta API Numbers)</option>
+      </select>
+    </div>
+
+    <div class="tool-group">
+      <span class="tool-label">Status:</span>
+      <select id="statusFilter">
+        <option value="all">All Campaigns</option>
+        <option value="active">Active Only</option>
+        <option value="paused">Paused Only</option>
+      </select>
+      <input type="search" id="searchInput" placeholder="Search campaign or ad…">
+    </div>
+  </div>
+
+  <!-- 4 Main KPI Cards -->
+  <div class="kpi-grid">
+    <div class="kpi-card">
+      <div class="kpi-top"><span class="kpi-title">Total Store Sales</span><span class="kpi-icon">💰</span></div>
+      <div class="kpi-val" id="kpiStoreSales">₹0</div>
+      <div class="kpi-sub" id="kpiStoreOrders">0 verified orders</div>
+      <div class="kpi-badge badge-good" id="kpiCustBreakdown">🌱 0 new · 0 returning</div>
+    </div>
+
+    <div class="kpi-card">
+      <div class="kpi-top"><span class="kpi-title">Meta Ad Spend</span><span class="kpi-icon">🎯</span></div>
+      <div class="kpi-val" id="kpiMetaSpend">₹0</div>
+      <div class="kpi-sub" id="kpiActiveCamps">Across active campaigns</div>
+      <div class="kpi-badge badge-purple" id="kpiBreakEven">Break-even Goal: 2.00x</div>
+    </div>
+
+    <div class="kpi-card">
+      <div class="kpi-top"><span class="kpi-title">Store Return</span><span class="kpi-icon">📈</span></div>
+      <div class="kpi-val" id="kpiStoreReturn">0.00x</div>
+      <div class="kpi-sub" id="kpiMetaLens">Meta Lens ROAS: 0.00x</div>
+      <div class="kpi-badge badge-warn" id="kpiAov">AOV: ₹0 · Cost/Order: ₹0</div>
+    </div>
+
+    <div class="kpi-card">
+      <div class="kpi-top"><span class="kpi-title">Meta's Claim vs Truth</span><span class="kpi-icon">⚖️</span></div>
+      <div class="kpi-val" id="kpiMetaClaimSales">₹0</div>
+      <div class="kpi-sub" id="kpiOverclaim">Meta over-claimed by ₹0</div>
+      <div class="kpi-badge badge-bad" id="kpiClaimOrders">Meta claims 0 vs 0 real</div>
+    </div>
+  </div>
+
+  <!-- 3 Alert Cards -->
+  <div class="alerts-grid" id="alertsGrid">
+    <div class="alert-card alert-winner">
+      <div class="alert-head"><span>🏆 Winning Campaign</span><span id="winReturn">0.00x True Return</span></div>
+      <div class="alert-name" id="winName">None identified</div>
+      <div class="alert-details" id="winDetails">Spend ₹0 · 0 orders</div>
+    </div>
+
+    <div class="alert-card alert-star">
+      <div class="alert-head"><span>⭐ Top Performer</span><span id="starReturn">Healthy ROAS</span></div>
+      <div class="alert-name" id="starName">Campaign Performance</div>
+      <div class="alert-details" id="starDetails">All campaigns operating normally</div>
+    </div>
+
+    <div class="alert-card alert-burner">
+      <div class="alert-head"><span>🔥 Cash Burner</span><span id="burnReturn">Below Break-Even</span></div>
+      <div class="alert-name" id="burnName">None detected</div>
+      <div class="alert-details" id="burnDetails">Rule: Spend >= ₹1,000 & Return < Break-even</div>
+    </div>
+  </div>
+
+  <!-- Tabs Navigation -->
+  <div class="tab-bar">
+    <button class="tab-btn active" data-tab="campaigns">Meta Campaigns</button>
+    <button class="tab-btn" data-tab="sources">All Traffic Sources</button>
+    <button class="tab-btn" data-tab="compare">Compare All Models</button>
+  </div>
+
+  <!-- Main Table Section -->
+  <div class="table-card">
+    <table id="mainTable">
+      <thead id="tableHead"></thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+  </div>
+
+  <!-- How is this calculated? Panel -->
+  <div class="formula-box">
+    <div class="formula-head"><span>💡</span> How is this calculated? (Formulas & Attribution Rules)</div>
+    <div class="formula-grid">
+      <div class="formula-item">
+        <b>True Return (ROAS)</b>
+        Real Attributed Sales ÷ Money Spent on Platform. Never inflated by view-through or modeled conversions.
+      </div>
+      <div class="formula-item">
+        <b>Cost Per Order (CPP)</b>
+        Total Ad Spend ÷ Real Fractional Orders driven. Target: ₹84.70.
+      </div>
+      <div class="formula-item">
+        <b>Average Order Value (AOV)</b>
+        Real Sales ÷ Real Orders. Uses full fractional internal precision.
+      </div>
+      <div class="formula-item">
+        <b>7-Day Click-Only Window</b>
+        Only clicks in the 7 days before an order receive attribution credit. A click 7 days + 1 hour prior receives 0%.
+      </div>
+      <div class="formula-item">
+        <b>Truth vs Meta Over-Claim</b>
+        Meta Claimed Purchases minus Verified Blend Sales. Highlights platform reporting discrepancy.
+      </div>
+      <div class="formula-item">
+        <b>Unattributed / Broken UTM</b>
+        Orders with paid click IDs (fbclid/gclid) that lacked utm_campaign tags land in Broken UTM to prevent false merging.
+      </div>
+    </div>
+  </div>
+
+  <!-- Sync Health Footer -->
+  <footer>
+    <div class="sync-tags">
+      <span class="sync-tag" id="footDb">Database: Loading…</span>
+      <span class="sync-tag" id="footMeta">Meta Ads: Syncing…</span>
+      <span class="sync-tag" id="footNoJourney">0 No-Journey Orders (Direct)</span>
+      <span class="sync-tag" id="footBreakEven">Break-Even Goal: 2.00x</span>
+    </div>
+    <div id="footUpdated">Synced just now</div>
+  </footer>
+
+</div>
+
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+const KEY = (() => {
+  const k = new URLSearchParams(location.search).get("k");
+  try { if (k) localStorage.setItem("boardKey", k); return k || localStorage.getItem("boardKey") || ""; } catch (e) { return k || ""; }
+})();
+
+if (!KEY) {
+  document.body.innerHTML = `
+    <div style="max-width:500px;margin:80px auto;padding:32px;background:#fff;border-radius:16px;box-shadow:0 10px 30px rgba(0,0,0,0.08);text-align:center;font-family:sans-serif;">
+      <h2 style="color:#dc2626;font-size:22px;margin-bottom:12px;">🔒 Access Restricted</h2>
+      <p style="color:#64748b;font-size:14px;line-height:1.6;">This attribution dashboard requires a valid board key (?k=...) to view store revenue and ad performance.</p>
+    </div>
+  `;
+  throw new Error("Missing board key");
+}
+
+$("opsLink").href = "/ops.html?k=" + encodeURIComponent(KEY);
+$("tvLink").href = "/?k=" + encodeURIComponent(KEY);
+
+const inr = v => Math.round(v || 0).toLocaleString("en-IN");
+let currentTab = "campaigns";
+let stateData = null;
+
+// Tab switcher
+document.querySelectorAll(".tab-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    currentTab = btn.dataset.tab;
+    renderTable();
+  });
+});
+
+$("presetSelect").addEventListener("change", () => loadAttribution());
+$("modelSelect").addEventListener("change", () => loadAttribution());
+$("statusFilter").addEventListener("change", () => renderTable());
+$("searchInput").addEventListener("input", () => renderTable());
+
+async function loadAttribution() {
+  const preset = $("presetSelect").value;
+  const model = $("modelSelect").value;
+  $("syncStatus").textContent = "Fetching…";
+
+  try {
+    let url = `/api/attribution?k=${encodeURIComponent(KEY)}&model=${encodeURIComponent(model)}`;
+    if (preset === "demo") {
+      url += "&demo=1";
+    } else if (preset === "yesterday") {
+      url += "&preset=yesterday";
+    } else if (preset === "7d") {
+      url += "&preset=7d";
+    } else if (preset === "14d") {
+      url += "&preset=14d";
+    } else if (preset === "30d") {
+      url += "&preset=30d";
+    }
+
+    const res = await fetch(url);
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    const data = await res.json();
+    stateData = data;
+    renderDashboard(data);
+    $("syncStatus").textContent = "Synced Live";
+  } catch (err) {
+    $("syncStatus").textContent = "Connection Error";
+  }
+}
+
+function renderDashboard(data) {
+  if (data.store_name) $("storeName").textContent = data.store_name + " · True Return Attribution";
+  if (data.date_label) $("subHeader").textContent = `Period: ${data.date_label} · Model: ${data.model} · 7-Day Click-Only Window`;
+
+  const k = data.kpis || {};
+  $("kpiStoreSales").textContent = "₹" + inr(k.total_store_sales);
+  $("kpiStoreOrders").textContent = `${k.total_store_orders || 0} verified orders`;
+  $("kpiCustBreakdown").textContent = `🌱 ${k.new_customers || 0} new · ${k.repeat_customers || 0} returning`;
+
+  $("kpiMetaSpend").textContent = "₹" + inr(k.meta_spend);
+  $("kpiBreakEven").textContent = `Break-even Goal: ${(data.break_even_roas || 2).toFixed(2)}x`;
+
+  $("kpiStoreReturn").textContent = k.store_return ? k.store_return.toFixed(2) + "x" : "–";
+  $("kpiMetaLens").textContent = `Meta Lens ROAS: ${k.meta_lens_roas ? k.meta_lens_roas.toFixed(2) + "x" : "–"}`;
+  $("kpiAov").textContent = `AOV: ₹${inr(k.avg_order_value)} · Cost/Order: ${k.blend_cost_per_order ? "₹" + inr(k.blend_cost_per_order) : "–"}`;
+
+  $("kpiMetaClaimSales").textContent = "₹" + inr(k.meta_claimed_sales);
+  $("kpiOverclaim").textContent = k.meta_overclaim > 0 ? `Meta over-claimed by ₹${inr(k.meta_overclaim)}` : "Meta claims in line with store";
+  $("kpiClaimOrders").textContent = `Meta claims ${k.meta_claimed_orders || 0} vs ${k.blend_orders || 0} real`;
+
+  // Alerts
+  const a = data.alerts || {};
+  if (a.winner) {
+    $("winName").textContent = a.winner.name;
+    $("winReturn").textContent = (a.winner.return || 0).toFixed(2) + "x True Return";
+    $("winDetails").textContent = `Spend ₹${inr(a.winner.spend)} · ${a.winner.orders} orders`;
+  }
+  if (a.burner) {
+    $("burnName").textContent = a.burner.name;
+    $("burnReturn").textContent = (a.burner.return || 0).toFixed(2) + "x Return";
+    $("burnDetails").textContent = `Spend ₹${inr(a.burner.spend)} · ${a.burner.orders} orders · ${a.burner.note}`;
+  }
+
+  // Footer
+  const h = data.sync_health || {};
+  if (h.db) $("footDb").textContent = `Database: ${h.db.store || "memory"} (${h.db.connected ? "Connected" : "Not connected"})`;
+  if (h.meta) $("footMeta").textContent = `Meta Ads: ${h.meta.connected ? "Connected" : h.meta.message || "Not connected"}`;
+  $("footNoJourney").textContent = `${h.no_journey_orders || 0} No-Journey Orders (Direct)`;
+  $("footBreakEven").textContent = `Break-even: ${(data.break_even_roas || 2).toFixed(2)}x · Target CPP: ₹${data.cost_per_order_target || 84.70}`;
+
+  renderTable();
+}
+
+function renderTable() {
+  if (!stateData) return;
+  const q = $("searchInput").value.toLowerCase().trim();
+
+  if (currentTab === "campaigns") {
+    renderCampaignsTable(q);
+  } else if (currentTab === "sources") {
+    renderSourcesTable(q);
+  } else if (currentTab === "compare") {
+    renderCompareTable();
+  }
+}
+
+function renderCampaignsTable(q) {
+  const thead = $("tableHead");
+  const tbody = $("tableBody");
+
+  thead.innerHTML = `
+    <tr>
+      <th>Campaign Name</th>
+      <th>Verdict</th>
+      <th class="num">Money Spent</th>
+      <th class="num">Real Orders</th>
+      <th class="num">Real Sales</th>
+      <th class="num">True Return</th>
+      <th class="num">Meta Claims</th>
+      <th class="num">Over-Claim</th>
+      <th class="num">Cost / Order</th>
+      <th class="num">Avg Order</th>
+      <th class="num">Clicks</th>
+      <th class="num">CPC</th>
+      <th class="num">CTR</th>
+      <th class="num">CPM</th>
+    </tr>
+  `;
+
+  const rows = (stateData.campaigns || []).filter(c => {
+    if (!q) return true;
+    return c.name.toLowerCase().includes(q) || String(c.id).includes(q);
+  });
+
+  if (rows.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="14" style="text-align:center;color:var(--muted);padding:30px;">No campaigns found matching criteria.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = rows.map(c => {
+    const verdictClass = c.verdict_type === "crushing" ? "pill-crushing" : c.verdict_type === "profit" ? "pill-profit" : c.verdict_type === "broken" ? "pill-broken" : "pill-loss";
+    return `
+      <tr>
+        <td><b>${c.name}</b></td>
+        <td><span class="verdict-pill ${verdictClass}" title="Rule: Based on Break-Even ${(stateData.break_even_roas || 2).toFixed(2)}x">${c.verdict || "Evaluating"}</span></td>
+        <td class="num font-bold">${c.spend > 0 ? "₹" + inr(c.spend) : "₹0"}</td>
+        <td class="num">${c.real_orders || 0}</td>
+        <td class="num font-bold">₹${inr(c.real_sales)}</td>
+        <td class="num font-bold" style="color:${c.true_return >= 2 ? 'var(--good)' : c.true_return ? 'var(--bad)' : 'var(--muted)'}">${c.true_return ? c.true_return.toFixed(2) + "x" : "–"}</td>
+        <td class="num">₹${inr(c.meta_claim_sales)}</td>
+        <td class="num" style="color:${c.meta_overclaim > 0 ? 'var(--bad)' : 'inherit'}">${c.meta_overclaim > 0 ? "+₹" + inr(c.meta_overclaim) : "₹0"}</td>
+        <td class="num">${c.cost_per_order ? "₹" + inr(c.cost_per_order) : "–"}</td>
+        <td class="num">₹${inr(c.avg_order)}</td>
+        <td class="num">${c.clicks || 0}</td>
+        <td class="num">${c.cpc ? "₹" + c.cpc.toFixed(2) : "–"}</td>
+        <td class="num">${c.ctr ? c.ctr.toFixed(2) + "%" : "–"}</td>
+        <td class="num">${c.cpm ? "₹" + inr(c.cpm) : "–"}</td>
+      </tr>
+    `;
+  }).join("");
+}
+
+function renderSourcesTable(q) {
+  const thead = $("tableHead");
+  const tbody = $("tableBody");
+
+  thead.innerHTML = `
+    <tr>
+      <th>Traffic Source</th>
+      <th class="num">Money Spent</th>
+      <th class="num">Real Orders</th>
+      <th class="num">Real Sales</th>
+      <th class="num">True Return</th>
+      <th class="num">Cost / Order</th>
+    </tr>
+  `;
+
+  const rows = (stateData.traffic_sources || []).filter(s => !q || s.source.toLowerCase().includes(q));
+
+  tbody.innerHTML = rows.map(s => `
+    <tr>
+      <td><b>${s.source}</b></td>
+      <td class="num">${s.spend > 0 ? "₹" + inr(s.spend) : "Free"}</td>
+      <td class="num">${s.real_orders}</td>
+      <td class="num font-bold">₹${inr(s.real_sales)}</td>
+      <td class="num font-bold">${s.true_return ? s.true_return.toFixed(2) + "x" : s.roas_label || "No ad spend"}</td>
+      <td class="num">${s.cost_per_order ? "₹" + inr(s.cost_per_order) : "–"}</td>
+    </tr>
+  `).join("");
+}
+
+function renderCompareTable() {
+  const thead = $("tableHead");
+  const tbody = $("tableBody");
+
+  thead.innerHTML = `
+    <tr>
+      <th>Attribution Model</th>
+      <th class="num">Total Verified Sales</th>
+      <th class="num">Attributed Sales</th>
+      <th class="num">Attributed Orders</th>
+      <th class="num">ROAS</th>
+      <th>Model Characteristics</th>
+    </tr>
+  `;
+
+  const comp = stateData.model_comparison || [];
+  tbody.innerHTML = comp.map(m => `
+    <tr>
+      <td><b>${m.model}</b></td>
+      <td class="num font-bold">₹${inr(m.store_sales)}</td>
+      <td class="num font-bold">₹${inr(m.attributed_sales)}</td>
+      <td class="num">${m.attributed_orders}</td>
+      <td class="num font-bold">${m.roas ? m.roas.toFixed(2) + "x" : "–"}</td>
+      <td style="color:var(--muted);font-size:12px;">${m.note || "Sums exactly to store revenue"}</td>
+    </tr>
+  `).join("");
+}
+
+loadAttribution();
+</script>
+</body>
+</html>
