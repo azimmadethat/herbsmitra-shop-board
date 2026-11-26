@@ -32,6 +32,7 @@
 //   4000. Otherwise almost no order would ever get confetti.
 import { cached, cacheGet, cachePut, local, midnightISO, addDays, shortName, metaCampaigns, money } from "./_lib.js";
 import { complete } from "./_ai.js";
+import { getMetro } from "./_places.js";
 
 const MILESTONES = [10000, 25000, 50000, 75000, 100000, 150000, 200000, 300000, 500000, 1000000];
 const THEMES = ["mango", "chai", "monsoon", "rasmalai", "bazaar", "dosa", "kulfi"];
@@ -153,10 +154,13 @@ function mapOrder(o, storeName, tz) {
     cancelled: CANCELLED_STATUSES.has(String(o.status || "").toLowerCase()),
     amount: parseFloat(o.total) || 0,
     city: titleCase(String(shipping.city || billing.city || "").trim()),
+    metro: getMetro(String(shipping.city || billing.city || "").trim()),
     first,
     status: String(o.status || "").toLowerCase(),
     pay: o.payment_method_title || "",
     method: String(o.payment_method || "").toLowerCase(),
+    phone: String(billing.phone || shipping.phone || "").trim().replace(/[^0-9]/g, "").slice(-10),
+    email: (String(billing.email || "").trim().toLowerCase().includes("@fastrr.com")) ? "" : String(billing.email || "").trim().toLowerCase(),
     customerId: o.customer_id || 0,
     new: false,
     visitorId,
@@ -250,27 +254,260 @@ async function history(env, today, storeName, tz) {
   });
 }
 
-/** New-customer check: 1 if this is the customer's only order ever. Checked for
- *  every order today, one cheap count request per customer, cached 24h and
- *  fetched 20 at a time so the first load of the day stays fast. */
-async function markNew(env, orders) {
-  const ids = [...new Set(orders.filter(o => o.customerId).map(o => o.customerId))];
-  const seen = new Map();
-  for (let i = 0; i < ids.length; i += 20) {
-    const results = await Promise.all(ids.slice(i, i + 20).map(async id => {
-      try {
-        const key = `cust-woo-${id}`;
-        const hit = await cacheGet(env, key);
-        if (hit !== null) return [id, hit];
-        const { total } = await wooRaw(env, "/orders", { customer: id, per_page: 1, _fields: "id" });
-        const isNew = String(total || "0") === "1";
-        await cachePut(env, key, isNew, 86400);
-        return [id, isNew];
-      } catch (e) { return [id, false]; }
-    }));
-    for (const [id, v] of results) seen.set(id, v);
+/** Approach B: Customer split endpoint logic.
+ *  1. Bulk fetches customer creation dates via /customers?include=... (per_page 100, 3 parallel requests).
+ *  2. Borderline rule:
+ *     - bulkDate >= viewedStartDate -> NEW
+ *     - bulkDate < cutoff2Days (D-2) -> RETURNING
+ *     - bulkDate in 2 days before D (or missing) -> verify with single order query
+ *  3. Guest checkouts (customer_id === 0) fall back to phone search batch 5.
+ *  4. Failed lookups count as unknown, never as new. Failure count is tracked and returned.
+ *  5. Phone and email are stripped; zero PII leaves the server.
+ */
+export async function customersSplit(env, targetDate = null, targetEndDate = null) {
+  const now = new Date();
+  const tz = env.STORE_TZ || "Asia/Kolkata";
+  const storeName = env.STORE_NAME || "Herbs Mitra";
+  const l = local(now, tz);
+
+  const isDatePattern = d => Boolean(d && /^\d{4}-\d{2}-\d{2}$/.test(d));
+  let startDate = isDatePattern(targetDate) ? targetDate : null;
+  let endDate = isDatePattern(targetEndDate) ? targetEndDate : null;
+
+  if (startDate && endDate) {
+    if (startDate > endDate) {
+      const tmp = startDate; startDate = endDate; endDate = tmp;
+    }
+    if (startDate === endDate) {
+      endDate = null;
+    }
   }
-  for (const o of orders) o.new = o.customerId ? !!seen.get(o.customerId) : false;
+
+  const isRange = Boolean(startDate && endDate && startDate !== endDate);
+  const isCustomDate = !isRange && Boolean(startDate && startDate !== l.date);
+  const today = isRange ? `${startDate} to ${endDate}` : (isCustomDate ? startDate : l.date);
+  const viewedStartDate = isRange ? startDate : (isCustomDate ? startDate : l.date);
+
+  const splitCacheKey = "cust-split-" + (isRange ? `${startDate}_${endDate}` : viewedStartDate);
+  const cachedSplit = await cacheGet(env, splitCacheKey);
+  if (cachedSplit && (cachedSplit.failures || 0) === 0) {
+    return {
+      date: viewedStartDate,
+      customers: { ...cachedSplit, loading: false },
+      new_customers: cachedSplit.new,
+      returning_customers: cachedSplit.returning,
+      unknown_customers: cachedSplit.unknown || 0,
+      failures: cachedSplit.failures || 0,
+    };
+  }
+
+  // Check if customer IDs were stashed by snapshot() in memory (numbers only, zero PII)
+  const rawOrdersKey = "cust-raw-orders-" + (isRange ? `${startDate}_${endDate}` : viewedStartDate);
+  let orderCustomerIds = await cacheGet(env, rawOrdersKey);
+  let guestPhones = [];
+
+  if (!orderCustomerIds || !Array.isArray(orderCustomerIds)) {
+    // When stash is empty (e.g. across separate Vercel containers):
+    // fetch orders for viewed date directly so the endpoint is 100% self-sufficient!
+    const raw = isRange
+      ? await ordersForDateRange(env, startDate, endDate, storeName, tz, 40)
+      : (isCustomDate
+          ? await ordersForDay(env, today, storeName, tz)
+          : await ordersSince(env, midnightISO(now, tz), storeName, tz, today));
+
+    const inWindow = isRange
+      ? (d => d >= startDate && d <= endDate)
+      : (d => d === today);
+
+    const validOrders = raw.filter(o => !o.cancelled && inWindow(o.at.date));
+    orderCustomerIds = validOrders.map(o => o.customerId || 0);
+    guestPhones = [...new Set(
+      validOrders
+        .filter(o => (!o.customerId || o.customerId === 0) && o.phone && o.phone.length >= 10)
+        .map(o => o.phone.slice(-10))
+    )];
+  }
+
+  // Collect unique valid customer IDs (> 0)
+  const cids = [...new Set(orderCustomerIds.map(c => typeof c === "object" ? (c.customerId || 0) : (c || 0)).filter(id => id > 0))];
+
+  // 1. Fetch all customer IDs in bulk (chunks of 100, in parallel - 3 requests only)
+  const chunks = [];
+  for (let i = 0; i < cids.length; i += 100) {
+    chunks.push(cids.slice(i, i + 100));
+  }
+
+  const bulkResults = await Promise.all(chunks.map(chunk =>
+    wooRawWithRetry(env, "/customers", {
+      include: chunk.join(","),
+      per_page: 100,
+      _fields: "id,date_created,date_created_gmt"
+    }).then(r => (Array.isArray(r?.data) ? r.data : [])).catch(() => [])
+  ));
+
+  const bulkMap = new Map();
+  for (const list of bulkResults) {
+    for (const c of list) {
+      if (c?.id && (c.date_created || c.date_created_gmt)) {
+        const gmt = c.date_created_gmt ? new Date(c.date_created_gmt + "Z") : new Date(c.date_created);
+        bulkMap.set(c.id, local(gmt, tz).date);
+      }
+    }
+  }
+
+  // 2. Borderline rule:
+  // bulkDate >= viewedStartDate -> NEW
+  // bulkDate < cutoff2Days -> RETURNING
+  // bulkDate in 2 days before viewedStartDate (or missing from bulk) -> verify with single order query
+  const cutoff2Days = addDays(viewedStartDate, -2);
+  const toVerifyCids = [];
+  const statusMap = new Map();
+
+  for (const cid of cids) {
+    const bulkDate = bulkMap.get(cid);
+    if (!bulkDate) {
+      toVerifyCids.push(cid);
+    } else if (bulkDate >= viewedStartDate) {
+      statusMap.set(`cid:${cid}`, { isNew: true, isReturning: false, isUnknown: false, failed: false });
+    } else if (bulkDate < cutoff2Days) {
+      statusMap.set(`cid:${cid}`, { isNew: false, isReturning: true, isUnknown: false, failed: false });
+    } else {
+      // Borderline (within 2 days before viewedStartDate)
+      toVerifyCids.push(cid);
+    }
+  }
+
+  // Single order verification for borderline / missing customer IDs in batches of 5
+  for (let i = 0; i < toVerifyCids.length; i += 5) {
+    const batch = toVerifyCids.slice(i, i + 5);
+    await Promise.all(batch.map(async cid => {
+      const cacheKey = `cust-first-cid:${cid}`;
+      try {
+        let earliest = await cacheGet(env, cacheKey);
+        if (!earliest) {
+          const res = await wooRawWithRetry(env, "/orders", {
+            customer: cid, order: "asc", orderby: "date", per_page: 1, _fields: "id,date_created,date_created_gmt"
+          });
+          const data = res?.data;
+          if (Array.isArray(data) && data.length > 0 && (data[0]?.date_created || data[0]?.date_created_gmt)) {
+            const gmt = data[0].date_created_gmt ? new Date(data[0].date_created_gmt + "Z") : new Date(data[0].date_created);
+            earliest = local(gmt, tz).date;
+            await cachePut(env, cacheKey, earliest, 86400 * 30);
+          }
+        }
+        if (earliest) {
+          if (earliest >= viewedStartDate) {
+            statusMap.set(`cid:${cid}`, { isNew: true, isReturning: false, isUnknown: false, failed: false });
+          } else {
+            statusMap.set(`cid:${cid}`, { isNew: false, isReturning: true, isUnknown: false, failed: false });
+          }
+        } else {
+          statusMap.set(`cid:${cid}`, { isNew: false, isReturning: false, isUnknown: true, failed: true });
+        }
+      } catch {
+        statusMap.set(`cid:${cid}`, { isNew: false, isReturning: false, isUnknown: true, failed: true });
+      }
+    }));
+  }
+
+  // Phone search fallback for guest checkouts (customerId === 0) in batches of 5
+  for (let i = 0; i < guestPhones.length; i += 5) {
+    const batch = guestPhones.slice(i, i + 5);
+    await Promise.all(batch.map(async phone => {
+      const cacheKey = `cust-first-phone:${phone}`;
+      try {
+        let earliest = await cacheGet(env, cacheKey);
+        if (!earliest) {
+          const res = await wooRawWithRetry(env, "/orders", {
+            search: phone, order: "asc", orderby: "date", per_page: 1, _fields: "id,date_created,date_created_gmt"
+          });
+          const data = res?.data;
+          if (Array.isArray(data) && data.length > 0 && (data[0]?.date_created || data[0]?.date_created_gmt)) {
+            const gmt = data[0].date_created_gmt ? new Date(data[0].date_created_gmt + "Z") : new Date(data[0].date_created);
+            earliest = local(gmt, tz).date;
+            await cachePut(env, cacheKey, earliest, 86400 * 30);
+          }
+        }
+        if (earliest) {
+          if (earliest >= viewedStartDate) {
+            statusMap.set(`phone:${phone}`, { isNew: true, isReturning: false, isUnknown: false, failed: false });
+          } else {
+            statusMap.set(`phone:${phone}`, { isNew: false, isReturning: true, isUnknown: false, failed: false });
+          }
+        } else {
+          statusMap.set(`phone:${phone}`, { isNew: false, isReturning: false, isUnknown: true, failed: true });
+        }
+      } catch {
+        statusMap.set(`phone:${phone}`, { isNew: false, isReturning: false, isUnknown: true, failed: true });
+      }
+    }));
+  }
+
+  let newCount = 0;
+  let returningCount = 0;
+  let unknownCount = 0;
+  let failureCount = 0;
+
+  for (const item of orderCustomerIds) {
+    const cid = typeof item === "object" ? (item.customerId || 0) : (item || 0);
+    if (cid > 0) {
+      const stat = statusMap.get(`cid:${cid}`);
+      if (!stat || stat.isUnknown || stat.failed) {
+        unknownCount++;
+        if (!stat || stat.failed) failureCount++;
+      } else if (stat.isNew) {
+        newCount++;
+      } else if (stat.isReturning) {
+        returningCount++;
+      }
+    } else {
+      // Guest note: guest orders (customerId === 0) count as unknown when only
+      // customer ids are stashed, because no phone is kept to match them.
+      const phone = typeof item === "object" && item.phone ? item.phone.slice(-10) : "";
+      const stat = phone ? statusMap.get(`phone:${phone}`) : null;
+      if (!stat || stat.isUnknown || stat.failed) {
+        unknownCount++;
+        if (stat?.failed) failureCount++;
+      } else if (stat.isNew) {
+        newCount++;
+      } else if (stat.isReturning) {
+        returningCount++;
+      }
+    }
+  }
+
+  const resultCustomers = {
+    new: newCount,
+    returning: returningCount,
+    unknown: unknownCount,
+    guest: orderCustomerIds.filter(c => (typeof c === "object" ? (c.customerId || 0) : (c || 0)) === 0).length,
+    loading: false,
+  };
+
+  if (failureCount === 0) {
+    const isPastDate = isCustomDate || (isRange && endDate < l.date);
+    const splitTtl = isPastDate ? 86400 * 30 : 300;
+    await cachePut(env, splitCacheKey, { ...resultCustomers, failures: 0 }, splitTtl);
+
+    const snapKey = isRange
+      ? `snap-range-${startDate}_${endDate}`
+      : (isCustomDate ? `snap-day-${today}` : `snap-live-${today}`);
+    const cachedSnap = await cacheGet(env, snapKey);
+    if (cachedSnap) {
+      cachedSnap.customers = resultCustomers;
+      cachedSnap.new_customers = newCount;
+      await cachePut(env, snapKey, cachedSnap, isCustomDate ? 86400 : 15);
+    }
+  }
+
+  return {
+    date: viewedStartDate,
+    customers: resultCustomers,
+    new_customers: newCount,
+    returning_customers: returningCount,
+    unknown_customers: unknownCount,
+    failures: failureCount,
+  };
 }
 
 /** Products running low: stock at or below the product's low-stock amount, or
@@ -333,13 +570,40 @@ export async function snapshot(env, targetDate = null, targetEndDate = null) {
     const isHistoricalRange = endDate < l.date;
     const cacheKey = `snap-range-${startDate}_${endDate}`;
     const cachedSnap = await cacheGet(env, cacheKey);
-    if (cachedSnap) return cachedSnap;
+    if (cachedSnap) {
+      if (cachedSnap.customers?.loading) {
+        const split = await cacheGet(env, `cust-split-${startDate}_${endDate}`);
+        if (split) {
+          cachedSnap.customers = { ...split, loading: false };
+          cachedSnap.new_customers = split.new;
+        }
+      }
+      return cachedSnap;
+    }
   } else if (isCustomDate) {
     const cachedSnap = await cacheGet(env, `snap-day-${today}`);
-    if (cachedSnap) return cachedSnap;
+    if (cachedSnap) {
+      if (cachedSnap.customers?.loading) {
+        const split = await cacheGet(env, `cust-split-${today}`);
+        if (split) {
+          cachedSnap.customers = { ...split, loading: false };
+          cachedSnap.new_customers = split.new;
+        }
+      }
+      return cachedSnap;
+    }
   } else {
     const cachedLive = await cacheGet(env, `snap-live-${today}`);
-    if (cachedLive) return cachedLive;
+    if (cachedLive) {
+      if (cachedLive.customers?.loading) {
+        const split = await cacheGet(env, `cust-split-${today}`);
+        if (split) {
+          cachedLive.customers = { ...split, loading: false };
+          cachedLive.new_customers = split.new;
+        }
+      }
+      return cachedLive;
+    }
   }
 
   const yday = addDays(l.date, -1);
@@ -397,8 +661,21 @@ export async function snapshot(env, targetDate = null, targetEndDate = null) {
     .filter(o => !o.cancelled && inWindow(o.at.date))
     .sort((a, b) => (a.id || 0) - (b.id || 0));
 
-  if (!isCustomDate && !isRange) {
-    await markNew(env, orders.slice(0, 6));
+  const viewedStartDate = isRange ? startDate : (isCustomDate ? startDate : today);
+  const cacheKey = "cust-split-" + (isRange ? `${startDate}_${endDate}` : viewedStartDate);
+  const cachedSplit = await cacheGet(env, cacheKey);
+
+  // Stash customer IDs only in server memory for the second endpoint (zero PII)
+  const rawOrdersKey = "cust-raw-orders-" + (isRange ? `${startDate}_${endDate}` : viewedStartDate);
+  await cachePut(env, rawOrdersKey, orders.map(o => o.customerId || 0), 300);
+
+  for (const o of orders) {
+    delete o.phone;
+    delete o.email;
+  }
+  for (const o of effectiveAll) {
+    delete o.phone;
+    delete o.email;
   }
 
   const calculatedRev = orders.reduce((a, o) => a + o.amount, 0);
@@ -425,7 +702,8 @@ export async function snapshot(env, targetDate = null, targetEndDate = null) {
 
   const cityMap = {};
   for (const o of orders) {
-    const e = cityMap[o.city || "Unknown"] || (cityMap[o.city || "Unknown"] = { city: o.city || "Unknown", orders: 0, revenue: 0 });
+    const metro = o.metro || o.city || "Unknown";
+    const e = cityMap[metro] || (cityMap[metro] = { city: metro, orders: 0, revenue: 0 });
     e.orders++; e.revenue += o.amount;
   }
   const cities = Object.values(cityMap).sort((a, b) => b.orders - a.orders || b.revenue - a.revenue).slice(0, 10)
@@ -472,11 +750,15 @@ export async function snapshot(env, targetDate = null, targetEndDate = null) {
   }
   const product_sales = Object.values(prodMap).sort((a, b) => b.qty - a.qty || b.revenue - a.revenue).slice(0, 10)
     .map(p => ({ name: p.name, qty: p.qty, revenue: Math.round(p.revenue) }));
-  let customers = {
-    new: orders.filter(o => o.customerId && o.new).length,
-    returning: orders.filter(o => o.customerId && !o.new).length,
-    guest: orders.filter(o => !o.customerId).length,
-  };
+  let customers = cachedSplit
+    ? { ...cachedSplit, loading: false }
+    : {
+        new: null,
+        returning: null,
+        unknown: null,
+        guest: orders.filter(o => !o.customerId).length,
+        loading: true,
+      };
   if (isLongRange && salesReport && finalOrdersCount > orders.length && orders.length > 0) {
     const repCust = parseInt(salesReport.total_customers || 0, 10);
     if (repCust > 0) {
@@ -618,7 +900,7 @@ export async function snapshot(env, targetDate = null, targetEndDate = null) {
     meta_age_min: meta && meta.at ? Math.round((now - new Date(meta.at)) / 60000) : null,
     campaigns: camps,
     products: Object.entries(products).sort((a, b) => b[1] - a[1]).slice(0, 5),
-    new_customers: orders.filter(o => o.new).length,
+    new_customers: customers.new,
     customer_details: true,
     cities,
     rejected,

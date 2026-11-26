@@ -951,6 +951,8 @@ function kpi(k, v, d, bad, good, icon, extraAttrs = "") {
   </div>`;
 }
 
+let lastCustSplitViewKey = null;
+
 function render(s) {
   state = s;
   hideLoading();
@@ -1085,12 +1087,17 @@ function render(s) {
     : (s.month_best ? s.month_best.date : "");
   const card8Icon = isRange ? "📊" : "🏆";
 
+  const isCustLoading = Boolean(c.loading || c.new === null || c.new === undefined);
+  const custVal = isCustLoading ? "…" : c.new;
+  const custSub = isCustLoading ? "Checking history…" : `${c.returning} returning · ${c.guest || 0} guest`;
+  const custGood = !isCustLoading && (c.new > 0);
+
   $("kpis").innerHTML =
     kpi(salesTitle, "₹" + inr(totalRev), salesSub, false, totalRev > 0, "💰") +
     kpi("Per Order (AOV)", "₹" + inr(effAov), vsText, vsPct !== null && vsPct < 0, vsPct !== null && vsPct > 0, "🏷️") +
     kpi("Cash On Delivery", p.cod.orders + " orders", "₹" + inr(p.cod.revenue), false, false, "💵") +
     kpi("Prepaid / Online", p.prepaid.orders + " orders", "₹" + inr(p.prepaid.revenue), false, false, "💳") +
-    kpi("New Customers", c.new, `${c.returning} returning · ${c.guest || 0} guest`, false, c.new > 0, "🌱") +
+    kpi("New Customers", custVal, custSub, false, custGood, "🌱") +
     kpi("Unfulfilled / Failed", badN + " orders", badAmt ? "₹" + inr(badAmt) + " lost" : "None in period", badN > 0, badN === 0, "❌") +
     kpi(card7Title, card7Val, card7Sub, false, false, card7Icon) +
     kpi(card8Title, card8Val, card8Sub, false, false, card8Icon) +
@@ -1148,6 +1155,45 @@ function render(s) {
       (s.campaigns || []).map(x => `<tr><td><b>${esc(x.short)}</b></td><td class="num">₹${inr(x.spend)}</td><td class="num">${x.purchases}</td><td class="num font-bold">${x.roas ? x.roas.toFixed(2) + "x" : "-"}</td></tr>`).join("") + "</tbody></table>" +
       `<p style="margin-top:14px;font-size:13px;line-height:1.6;color:var(--muted);">Total Ad Spend <b>₹${inr(s.spend)}</b> · Real Return <b>${s.roas_real ? s.roas_real.toFixed(2) + "x" : "-"}</b> (real store revenue ÷ ad spend) · Meta Pixel ROAS <b>${s.roas_meta ? s.roas_meta.toFixed(2) + "x" : "-"}</b> · <b>True Ad Cost per Store Order: ₹${inr(trueCpp)}</b>.` +
       (s.meta_age_min !== null && s.meta_age_min > 40 ? ` <span style="color:var(--bad);font-weight:600;">(Ad numbers are ${s.meta_age_min}m old, reconnecting)</span>` : "") + "</p>";
+  }
+
+  if (s.customers && s.customers.loading) {
+    const viewKey = (selectedStartDate && selectedEndDate)
+      ? `${selectedStartDate}_${selectedEndDate}`
+      : (selectedDate || s.selected_date || s.today || s.date || "live");
+
+    if (lastCustSplitViewKey !== viewKey) {
+      lastCustSplitViewKey = viewKey;
+      fetchCustomersSplit(viewKey, selectedDate || s.selected_date, selectedStartDate, selectedEndDate);
+    }
+  }
+}
+
+async function fetchCustomersSplit(viewKey, dateParam, startDateParam, endDateParam) {
+  try {
+    let url = `/api/customers?k=${encodeURIComponent(KEY)}`;
+    if (startDateParam && endDateParam) {
+      url += `&start_date=${encodeURIComponent(startDateParam)}&end_date=${encodeURIComponent(endDateParam)}`;
+    } else if (dateParam) {
+      url += `&date=${encodeURIComponent(dateParam)}`;
+    }
+    const res = await fetch(url, { cache: "no-store" });
+    if (!res.ok) return;
+    const data = await res.json();
+    if (!data || !data.customers) return;
+
+    const currentViewKey = (selectedStartDate && selectedEndDate)
+      ? `${selectedStartDate}_${selectedEndDate}`
+      : (selectedDate || (state && (state.selected_date || state.today || state.date)) || "live");
+    if (currentViewKey !== viewKey) return;
+
+    if (state) {
+      state.customers = { ...data.customers, loading: false };
+      state.new_customers = data.new_customers ?? data.customers.new;
+      render(state);
+    }
+  } catch (err) {
+    console.warn("Customers split fetch failed:", err);
   }
 }
 

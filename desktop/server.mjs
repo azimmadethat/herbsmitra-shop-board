@@ -25,6 +25,7 @@ import { fileURLToPath } from "node:url";
 import { onRequestGet as stateGet } from "../functions/api/state.js";
 import { onRequestGet as healthGet } from "../functions/api/health.js";
 import { onRequestPost as askPost } from "../functions/api/ask.js";
+import { onRequestGet as customersGet } from "../functions/api/customers.js";
 
 const major = Number(process.versions.node.split(".")[0] || 0);
 if (major < 18) {
@@ -187,7 +188,17 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
-    if (pathname === "/api/state" || pathname === "/api/health" || pathname === "/api/ask") {
+    if (pathname === "/api/customers" && req.method === "GET") {
+      if (!WC_CONNECTED) {
+        sendJson(res, 502, { error: "WooCommerce is not connected yet." });
+        return;
+      }
+      const out = await runHandler(customersGet, req, null);
+      send(res, out.status, { "Content-Type": "application/json; charset=utf-8" }, out.text);
+      return;
+    }
+
+    if (pathname === "/api/state" || pathname === "/api/health" || pathname === "/api/ask" || pathname === "/api/customers") {
       sendJson(res, 405, { error: "Method not allowed." });
       return;
     }
