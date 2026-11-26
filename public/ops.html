@@ -1067,6 +1067,30 @@ function render(s) {
     }
   }
 
+  let roasVal = "—";
+  let roasDesc = "Not connected";
+  let roasGood = false;
+  let roasBad = false;
+  if (s.meta_on) {
+    if (s.meta_error) {
+      roasVal = "Error";
+      roasDesc = esc(s.meta_error);
+      roasBad = true;
+    } else if (s.spend && s.roas_real) {
+      roasVal = s.roas_real.toFixed(2) + "x";
+      roasDesc = s.roas_meta ? `Meta Pixel: ${s.roas_meta.toFixed(2)}x` : "Real store return";
+      roasGood = s.roas_real >= (s.break_even || 2);
+      roasBad = s.roas_real < (s.break_even || 2);
+    } else if (s.spend) {
+      roasVal = "0.00x";
+      roasDesc = s.roas_meta ? `Meta Pixel: ${s.roas_meta.toFixed(2)}x` : "No store revenue";
+      roasBad = true;
+    } else {
+      roasVal = "—";
+      roasDesc = isRange ? "No spend recorded in period" : "No ad spend yet today";
+    }
+  }
+
   const card7Title = isRange ? "Range Best Day" : "Yesterday Total";
   const card7Val = isRange
     ? (s.month_best ? "₹" + inr(s.month_best.revenue) : "–")
@@ -1092,16 +1116,21 @@ function render(s) {
   const custSub = isCustLoading ? "Checking history…" : `${c.returning} returning · ${c.guest || 0} guest`;
   const custGood = !isCustLoading && (c.new > 0);
 
+  const ordersVal = inr(totalOrders) + (totalOrders === 1 ? " order" : " orders");
+  const ordersSub = `${p.cod.orders} COD · ${p.prepaid.orders} prepaid`;
+
   $("kpis").innerHTML =
     kpi(salesTitle, "₹" + inr(totalRev), salesSub, false, totalRev > 0, "💰") +
     kpi("Per Order (AOV)", "₹" + inr(effAov), vsText, vsPct !== null && vsPct < 0, vsPct !== null && vsPct > 0, "🏷️") +
+    kpi("Total Orders", ordersVal, ordersSub, false, totalOrders > 0, "📦", 'style="cursor:pointer;" onclick="document.getElementById(\'ordersTitle\')?.scrollIntoView({behavior:\'smooth\'})" title="Click to view all orders"') +
     kpi("Cash On Delivery", p.cod.orders + " orders", "₹" + inr(p.cod.revenue), false, false, "💵") +
     kpi("Prepaid / Online", p.prepaid.orders + " orders", "₹" + inr(p.prepaid.revenue), false, false, "💳") +
     kpi("New Customers", custVal, custSub, false, custGood, "🌱") +
     kpi("Unfulfilled / Failed", badN + " orders", badAmt ? "₹" + inr(badAmt) + " lost" : "None in period", badN > 0, badN === 0, "❌") +
     kpi(card7Title, card7Val, card7Sub, false, false, card7Icon) +
     kpi(card8Title, card8Val, card8Sub, false, false, card8Icon) +
-    kpi("Meta Ad Spend", metaSpendVal, metaSpendDesc, metaBad, metaGood, '<img src="/meta-sunrise.png?v=2" alt="Meta" style="width:18px;height:18px;object-fit:contain;vertical-align:middle;display:inline-block;border-radius:3px;">', 'style="cursor:pointer;" onclick="document.getElementById(\'meta-section\')?.scrollIntoView({behavior:\'smooth\'})" title="Click to view Meta Campaigns breakdown"');
+    kpi("Meta Ad Spend", metaSpendVal, metaSpendDesc, metaBad, metaGood, '<img src="/meta-sunrise.png?v=2" alt="Meta" style="width:18px;height:18px;object-fit:contain;vertical-align:middle;display:inline-block;border-radius:3px;">', 'style="cursor:pointer;" onclick="document.getElementById(\'meta-section\')?.scrollIntoView({behavior:\'smooth\'})" title="Click to view Meta Campaigns breakdown"') +
+    kpi("Actual ROAS", roasVal, roasDesc, roasBad, roasGood, "🎯", 'style="cursor:pointer;" onclick="document.getElementById(\'meta-section\')?.scrollIntoView({behavior:\'smooth\'})" title="Click to view Meta Campaigns breakdown"');
 
   const st = s.statuses || {};
   $("pipeline").innerHTML = ["pending", "processing", "on-hold", "completed", "cancelled", "refunded", "failed"].map(k => {
